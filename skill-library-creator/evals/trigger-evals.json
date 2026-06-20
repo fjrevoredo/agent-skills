@@ -1,0 +1,82 @@
+[
+  {
+    "query": "We have 18 project skills in .agents/skills now and most are one-off maintenance procedures. Design a skill library so only one dispatcher is normally visible but I can still invoke each runbook explicitly.",
+    "should_trigger": true
+  },
+  {
+    "query": "Can you consolidate add-locale, dependency-update, and release-recovery into a runbooks skill? First check whether they actually belong together and keep the inner procedures available on demand.",
+    "should_trigger": true
+  },
+  {
+    "query": "our skill list is getting noisy. i want a skill-of-skills for rare ops tasks, with some kind of catalog so the agent can find the right nested workflow",
+    "should_trigger": true
+  },
+  {
+    "query": "Create an operations-handler-library from analyze-alert and create-support-email-reply. Preserve their scripts and make sure nested SKILL.md files do not get registered separately.",
+    "should_trigger": true
+  },
+  {
+    "query": "We crossed ten active skills and performance is getting worse. Group the manually invoked ones behind a dispatcher and audit Codex and Claude skill discovery paths before cutover.",
+    "should_trigger": true
+  },
+  {
+    "query": "I have two emergency-only Agent Skills attached: rotate-credentials and recover-backup. I did not choose a name. Build the appropriate library and validate both entries.",
+    "should_trigger": true
+  },
+  {
+    "query": "Make a project-level meta-skill that routes `$runbooks add-locale` to the complete add-locale skill without loading dependency maintenance instructions too.",
+    "should_trigger": true
+  },
+  {
+    "query": "Please move our exceptional Flathub repair and stale-PR integration skills out of the default skill catalog, but do not make them unreachable or duplicate their registrations.",
+    "should_trigger": true
+  },
+  {
+    "query": "Review these five skills and decide which should remain standalone versus live in one or more coherent libraries. Do not create a miscellaneous hidden-skills bucket.",
+    "should_trigger": true
+  },
+  {
+    "query": "Add a new entry to our existing runbooks-library, update its Available Skills table, and verify the sync script will not recreate the old standalone skill.",
+    "should_trigger": true
+  },
+  {
+    "query": "Create a new skill that teaches agents how to rotate service credentials safely. It will be installed as a normal standalone skill.",
+    "should_trigger": false
+  },
+  {
+    "query": "Generalize this Mini Diarium add-locale skill so I can reuse it in unrelated repositories.",
+    "should_trigger": false
+  },
+  {
+    "query": "Install the spreadsheet and PDF skills from our curated marketplace into my user-level Codex setup.",
+    "should_trigger": false
+  },
+  {
+    "query": "List all Agent Skills currently installed in this repository and show their descriptions.",
+    "should_trigger": false
+  },
+  {
+    "query": "Our agent client needs recursive discovery of .agents/skills and an activate_skill API. Implement the client-side scanner and prompt catalog.",
+    "should_trigger": false
+  },
+  {
+    "query": "Improve the trigger description of the existing todo-manager skill and benchmark whether it activates correctly.",
+    "should_trigger": false
+  },
+  {
+    "query": "Write an incident-response runbook in docs/operations.md for engineers to follow during outages. This is documentation, not an Agent Skill.",
+    "should_trigger": false
+  },
+  {
+    "query": "Create a TypeScript library that exports our shared frontend validation helpers.",
+    "should_trigger": false
+  },
+  {
+    "query": "Package these skills as a Codex plugin with a manifest and marketplace entry.",
+    "should_trigger": false
+  },
+  {
+    "query": "Update the implementation instructions inside dependency-update; its lockfile validation step is wrong.",
+    "should_trigger": false
+  }
+]

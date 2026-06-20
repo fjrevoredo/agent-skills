@@ -22,10 +22,11 @@ Every `SKILL.md` must start with YAML frontmatter containing these fields:
 ```yaml
 ---
 name: skill-name
-version: 1.0.0
 description: |
   What the skill does and when to trigger it.
   Include trigger keywords.
+metadata:
+  version: "1.0.0"
 ---
 ```
 
@@ -34,8 +35,8 @@ description: |
 | Field | Type | Rules |
 |-------|------|-------|
 | `name` | string | Kebab-case identifier. Must match the directory name. |
-| `version` | string | Semantic version (see [Versioning](#8-versioning)). Starts at `1.0.0`. |
 | `description` | string | Under 1024 characters. See [Description Optimization](#2-description-optimization). |
+| `metadata.version` | string | Semantic version (see [Versioning](#8-versioning)). Starts at `"1.0.0"`. |
 
 ### Optional Fields
 
@@ -46,7 +47,7 @@ description: |
 ### Anti-examples
 
 ```yaml
-# BAD: name uses spaces, no version
+# BAD: name uses spaces, no metadata version
 ---
 name: My Skill
 description: Does stuff.
@@ -55,9 +56,10 @@ description: Does stuff.
 # BAD: description exceeds 1024 characters (will be truncated)
 ---
 name: data-processor
-version: 1.0.0
 description: |
   [500+ words of detailed explanation that will get cut off...]
+metadata:
+  version: "1.0.0"
 ---
 ```
 
@@ -66,7 +68,6 @@ description: |
 ```yaml
 ---
 name: todo-manager
-version: 1.0.0
 description: |
   End-to-end management of TODO items in a Markdown-based backlog. Covers creation with auto-assigned IDs,
   status tracking, archival of completed items, and format validation. Use this skill whenever the user asks to
@@ -75,6 +76,8 @@ description: |
   Markdown file — even if they don't explicitly say "TODO".
   Triggers: TODO, todo item, add todo, create todo, todo status, archive todo, validate TODO,
   TODO ID, TODO-0001, check TODO, todos, list todos, todo list, backlog, task tracking, roadmap, task list.
+metadata:
+  version: "1.0.0"
 ---
 ```
 
@@ -395,7 +398,7 @@ Before adding a new skill to this repo, verify all items below:
 
 - [ ] `SKILL.md` exists and has valid YAML frontmatter
 - [ ] `name` is kebab-case and matches the directory name
-- [ ] `version` is present and starts at `1.0.0` (or bumped appropriately for updates)
+- [ ] `metadata.version` is present and starts at `"1.0.0"` (or bumped appropriately for updates)
 - [ ] `description` is under 1024 characters
 - [ ] `description` uses imperative phrasing and lists trigger contexts
 - [ ] `SKILL.md` body is under 500 lines (use `references/` for detail beyond this)
@@ -412,7 +415,7 @@ Before adding a new skill to this repo, verify all items below:
 ```bash
 # Check frontmatter validity (requires yq or similar)
 yq eval '.name' SKILL.md
-yq eval '.version' SKILL.md
+yq eval '.metadata.version' SKILL.md
 
 # Check description length
 python -c "
@@ -435,7 +438,8 @@ grep -ri 'mini-diarium\|diary\|diarium' SKILL.md
 
 ## 8. Versioning
 
-All skills use semantic versioning in their frontmatter `version` field.
+All skills use semantic versioning in the standard frontmatter `metadata.version` field. Keep version inside
+`metadata`; the Agent Skills reference validator rejects a non-standard top-level `version` field.
 
 ### When to Bump
 

@@ -8,6 +8,8 @@ description: |
   artifacts (scripts, CI, configs), and process changes. For small/obvious fixes,
   edits directly. For structural changes, produces a plan. Use this whenever a task
   surfaced gaps in tooling, documentation, or automation.
+metadata:
+  version: "1.0.0"
 ---
 
 # Skill Improver

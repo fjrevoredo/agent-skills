@@ -1,6 +1,5 @@
 ---
 name: skill-extractor
-version: 1.0.0
 description: |
   Port a repo-specific skill into a generic, reusable skill for the agent-skills library. Use this skill
   whenever the user asks to extract a skill from a project, generalize a skill, port a skill to another repo,
@@ -10,6 +9,8 @@ description: |
   directory and the user wants to make it reusable across repositories, this skill should be used.
   Triggers: extract skill, generalize skill, port skill, convert skill, remove repo-specific, make skill reusable,
   skill extraction, skill generalization, library skill, repo-agnostic skill, skill from project.
+metadata:
+  version: "1.0.0"
 ---
 
 # Skill Extractor
@@ -82,7 +83,7 @@ For each element classified as "Extract to template" in Step 2, create a templat
 
 Compose the new skill following `SKILL_RULES.md` standards:
 
-1. **Frontmatter:** `name` (kebab-case, matches directory), `version: 1.0.0`, `description` (under 1024 chars, imperative, pushy, with trigger keywords)
+1. **Frontmatter:** `name` (kebab-case, matches directory), `description` (under 1024 chars, imperative, pushy, with trigger keywords), and `metadata.version: "1.0.0"`
 2. **Structure:** Under 500 lines. Use `references/` for detail beyond this limit.
 3. **Operations:** Each operation has step-by-step instructions and validation guidance.
 4. **Gotchas:** Include non-obvious pitfalls specific to this skill's domain.
@@ -170,7 +171,7 @@ Update the `description` field in the new SKILL.md frontmatter with the optimize
 Run this checklist before declaring the extraction complete. All items must pass.
 
 - [ ] `SKILL.md` exists at `skill-name/SKILL.md` in the agent-skills repo
-- [ ] Frontmatter has `name` (kebab-case), `version: 1.0.0`, and `description` (under 1024 chars)
+- [ ] Frontmatter has `name` (kebab-case), `description` (under 1024 chars), and `metadata.version: "1.0.0"`
 - [ ] `name` matches the directory name
 - [ ] No references to the source project's name, paths, or conventions remain in the skill body
 - [ ] Hardcoded paths are replaced with frontmatter-configurable defaults (if the skill uses paths)

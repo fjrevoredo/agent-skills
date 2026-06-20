@@ -1,6 +1,5 @@
 ---
 name: agent-evaluator
-version: 1.0.0
 description: |
   Evaluate a subagent by running its scenario suite as parallel subagents, scoring results against
   observable criteria, and producing exact FIND/REPLACE edits for any failing behaviors. Use this
@@ -12,6 +11,8 @@ description: |
   "does it work now?" or similar.
   Triggers: evaluate agent, run evals, assess agent, score agent, test agent, quality-check, eval
   suite, agent performance, agent working, improve agent, rerun evals, benchmark agent.
+metadata:
+  version: "1.0.0"
 ---
 
 # Agent Evaluator

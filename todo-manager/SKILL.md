@@ -1,6 +1,5 @@
 ---
 name: todo-manager
-version: 1.0.0
 description: |
   End-to-end management of TODO items in a Markdown-based backlog. Covers creation with auto-assigned IDs,
   status tracking, archival of completed items, and format validation. Use this skill whenever the user asks to
@@ -10,6 +9,8 @@ description: |
   Markdown-based task tracking, this skill should be used to interact with it.
   Triggers: TODO, todo item, add todo, create todo, todo status, archive todo, validate TODO,
   TODO ID, TODO-0001, check TODO, todos, list todos, todo list, backlog, task tracking, roadmap, task list.
+metadata:
+  version: "1.0.0"
 ---
 
 # TODO Manager Skill

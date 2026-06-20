@@ -1,6 +1,8 @@
 ---
 name: manual-planning
 description: Create, update, review, and execute manual Markdown implementation plans when harness planning mode is not being used. Use when the user asks for a plan file, manual plan, implementation plan, execution plan, roadmap, task checklist, planning document, or agent-maintained plan with statuses, validations, milestones, approval gates, and cleanup steps.
+metadata:
+  version: "1.0.0"
 ---
 
 # Manual Planning
