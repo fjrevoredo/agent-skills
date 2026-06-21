@@ -42,10 +42,10 @@ If the user provides no name, derive the shared scope and use `<scope>-library`.
 ├── SKILL.md
 └── skills/
     ├── <entry-one>/
-    │   ├── SKILL.md
+    │   ├── ENTRY.md
     │   └── ... existing resources
     └── <entry-two>/
-        ├── SKILL.md
+        ├── ENTRY.md
         └── ... existing resources
 ```
 
@@ -59,11 +59,12 @@ continue to work.
 2. **Verify reachability.** Inspect how the target client discovers and explicitly activates skills.
    - The library must be discoverable.
    - Nested entries must not remain separately registered.
-   - If the client recursively discovers every nested `SKILL.md` and cannot exclude them, stop: this layout
-     will not reduce context.
+   - Name nested library entrypoints `ENTRY.md`, not `SKILL.md`, to prevent automatic discovery or
+     registration by harnesses such as Codex.
    - Check generated mirrors, symlinks, user-level copies, plugins, and skill-sync scripts too.
-3. **Validate entries.** Each inner skill must remain a complete, valid Agent Skill. Fix defects only when the
-   user authorized changing the source skill.
+3. **Validate entries.** Preserve each inner workflow as a complete reusable bundle. Keep the original
+   standalone skill valid until cutover and verify that the nested bundle still contains the expected
+   instructions, scripts, assets, and references.
 4. **Create the dispatcher.** Write the library `SKILL.md` using the template below. Its description should
    describe the shared domain, not enumerate every entry.
 5. **Migrate entries.** Place complete skill directories under `skills/`. Keep originals registered until the
@@ -93,7 +94,7 @@ description: <Shared domain and when the library should activate. Mention explic
 
 ## Routing
 
-Match the request to **Available Skills**. Read the selected entry's `SKILL.md` completely before acting and
+Match the request to **Available Skills**. Read the selected entry's `ENTRY.md` completely before acting and
 resolve relative paths from that entry's directory. Load only the entries required for the current request.
 If no entry matches, state that the workflow is not in this library.
 
@@ -104,8 +105,8 @@ entry.
 
 | Skill | Use when | Load |
 |-------|----------|------|
-| `<entry-one>` | <Short routing description> | `skills/<entry-one>/SKILL.md` |
-| `<entry-two>` | <Short routing description> | `skills/<entry-two>/SKILL.md` |
+| `<entry-one>` | <Short routing description> | `skills/<entry-one>/ENTRY.md` |
+| `<entry-two>` | <Short routing description> | `skills/<entry-two>/ENTRY.md` |
 ```
 
 The table is the library catalog and single source of truth. Do not create a duplicate registry unless the
@@ -117,10 +118,10 @@ Run the target repository's checks. When available, also run:
 
 ```bash
 skills-ref validate <path-to-library>
-skills-ref validate <path-to-library>/skills/<entry-name>
 ```
 
-Validate every entry, the routing behavior, and the final client discovery result before removing originals.
+Validate the dispatcher, the preserved bundled resources, the routing behavior, and the final client discovery
+result before removing originals.
 
 ## Maintenance
 
@@ -138,7 +139,8 @@ Split the library when its shared description becomes vague or routing becomes a
 
 - A hidden entry is unreachable unless the dispatcher activates, so preserve explicit activation and useful
   domain triggers.
-- Recursive client discovery can make every nested skill active and defeat the purpose.
+- Recursive client discovery can make every nested `SKILL.md` active and defeat the purpose. Use `ENTRY.md`
+  for nested library entries so harnesses like Codex do not auto-register them.
 - Copying only `SKILL.md` breaks bundled relative resources.
 - Keeping standalone and nested registrations creates duplicate triggers and saves no context.
 - A skill library is a composition convention, not a primitive defined by the Agent Skills specification;
