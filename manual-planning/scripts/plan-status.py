@@ -48,14 +48,15 @@ PLAN_STATUSES = CHECK.PLAN_STATUSES
 
 
 def task_heading_indices(lines, task_id):
-    """Indices of headings for exactly this task id.
+    """Indices of real headings for exactly this task id.
 
     The id is anchored on the trailing colon: a bare prefix match on `Task 1.1`
     also matches `Task 1.10`, which would make `set 1.1` ambiguous on any plan
-    that reaches ten tasks in a milestone.
+    that reaches ten tasks in a milestone. Fenced examples and HTML comments are
+    masked before matching.
     """
     rx = re.compile(r"^#{3,4}\s+Task\s+" + re.escape(task_id) + r"\s*:")
-    return [i for i, line in enumerate(lines) if rx.match(line)]
+    return [i for i, line in enumerate(CHECK.mask(lines)) if rx.match(line)]
 
 
 def read(path):
@@ -70,9 +71,10 @@ def read(path):
 def collect(text):
     """(plan status, [(task id, status)]) as written."""
     lines = text.split("\n")
+    masked = CHECK.mask(lines)
     plan_status = None
     tasks = []
-    for i, line in enumerate(lines):
+    for i, line in enumerate(masked):
         if plan_status is None:
             m = re.match(r"^\s*-\s*Plan Status\s*:\s*(.*)$", line)
             if m:
@@ -80,10 +82,10 @@ def collect(text):
         m = re.match(r"^(#{3,4})\s+Task\s+([0-9][0-9.]*)\s*:\s*(.*)$", line)
         if m:
             status = None
-            for j in range(i + 1, len(lines)):
-                if re.match(r"^#{1,6}\s", lines[j]):
+            for j in range(i + 1, len(masked)):
+                if re.match(r"^#{1,6}\s", masked[j]):
                     break
-                sm = re.match(r"^\s*-\s*Status\s*:\s*(.*)$", lines[j])
+                sm = re.match(r"^\s*-\s*Status\s*:\s*(.*)$", masked[j])
                 if sm:
                     status = sm.group(1).strip()
                     break
@@ -132,10 +134,11 @@ def cmd_set(path, text, task_id, status):
     start = hits[0]
 
     target = None
-    for j in range(start + 1, len(lines)):
-        if re.match(r"^#{1,6}\s", lines[j]):
+    masked = CHECK.mask(lines)
+    for j in range(start + 1, len(masked)):
+        if re.match(r"^#{1,6}\s", masked[j]):
             break
-        if re.match(r"^\s*-\s*Status\s*:", lines[j]):
+        if re.match(r"^\s*-\s*Status\s*:", masked[j]):
             target = j
             break
     if target is None:
@@ -143,7 +146,8 @@ def cmd_set(path, text, task_id, status):
         return 1
 
     indent = re.match(r"^(\s*-\s*)Status\s*:", lines[target]).group(1)
-    lines[target] = "%sStatus: %s" % (indent, status)
+    line_ending = "\r" if lines[target].endswith("\r") else ""
+    lines[target] = "%sStatus: %s%s" % (indent, status, line_ending)
     new_text = "\n".join(lines)
     with open(path, "w", encoding="utf-8", newline="") as fh:
         fh.write(new_text)

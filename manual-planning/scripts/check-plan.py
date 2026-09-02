@@ -20,6 +20,8 @@ import subprocess
 import sys
 
 VERSION = "2.0.0"
+HERE = os.path.dirname(os.path.realpath(__file__))
+TEMPLATE_NAMES = ("simple-plan-template.md", "milestoned-plan-template.md")
 
 PLAN_STATUSES = {
     "DRAFT",
@@ -50,26 +52,38 @@ def normalize_status(value, vocabulary):
             return token
     return None
 
-# Task 2.1 step 11 is the canonical list. `Milestones` (milestoned template) and
-# `Tasks` (simple template) are one slot.
-REQUIRED_SECTIONS = [
-    "Metadata",
-    "Status Legend",
-    "Context For A Clean Session",
-    "Goal",
-    "Scope",
-    "Non-Goals",
-    "Assumptions",
-    "Open Questions",
-    ("Milestones", "Tasks"),
-    "Project Gates",
-    "Pre-flight Checks",
-    "Decision Log",
-    "Final Verification",
-    "Approval Gate",
-    "Plan Self-Check",
-    "Execution Notes",
-]
+def normalized_template_sections(text):
+    """Return canonical top-level section slots from a template."""
+    lines = mask(text.split("\n"))
+    sections = []
+    for line in lines:
+        m = re.match(r"^##\s+(.+?)\s*$", line)
+        if not m:
+            continue
+        title = m.group(1)
+        slot = "Milestones or Tasks" if title in ("Milestones", "Tasks") else title
+        if slot not in sections:
+            sections.append(slot)
+    return sections
+
+
+def required_sections():
+    """Load and compare the canonical section slots from both templates."""
+    sections = []
+    for name in TEMPLATE_NAMES:
+        path = os.path.join(HERE, "..", "assets", name)
+        try:
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError as exc:
+            raise RuntimeError("cannot read canonical template %s: %s" % (path, exc))
+        sections.append((name, normalized_template_sections(text)))
+    if sections[0][1] != sections[1][1]:
+        raise RuntimeError(
+            "canonical templates have different top-level sections: %s=%s, %s=%s"
+            % (sections[0][0], sections[0][1], sections[1][0], sections[1][1])
+        )
+    return sections[0][1]
 
 REMOVED_METADATA_FIELDS = ["Created", "Last Updated", "Owner", "Approval"]
 
@@ -211,6 +225,37 @@ def field_value(body, name):
     return None
 
 
+def milestone_level_body(body):
+    """Keep milestone fields before the first nested task heading."""
+    out = []
+    for i, line in body:
+        if re.match(r"^####\s+", line):
+            break
+        out.append((i, line))
+    return out
+
+
+def task_steps(body):
+    """Return only the task's Steps field, excluding later task fields."""
+    lines = []
+    steps_indent = None
+    for _, line in body:
+        if steps_indent is None:
+            match = re.match(r"^(\s*)-\s*Steps\s*:", line)
+            if not match:
+                continue
+            steps_indent = match.group(1)
+            lines.append(line)
+            continue
+        if re.match(r"^#{1,6}\s", line):
+            break
+        field = re.match(r"^(\s*)-\s*[A-Za-z][A-Za-z ]*\s*:", line)
+        if field and field.group(1) == steps_indent:
+            break
+        lines.append(line)
+    return lines
+
+
 class Plan:
     def __init__(self, path, text):
         self.path = os.path.abspath(path)
@@ -289,6 +334,15 @@ def git_root(path):
         return None
     root = out.stdout.strip()
     return root or None
+
+
+def guessed_layout_root(path, plan_dir):
+    """Derive the fallback root by removing the configured plan directory."""
+    root = os.path.dirname(path)
+    for component in os.path.normpath(plan_dir).split(os.sep):
+        if component not in ("", "."):
+            root = os.path.dirname(root)
+    return root
 
 
 def is_tracked(root, path):
@@ -372,7 +426,7 @@ def named_existing_files(plan, root):
     return found
 
 
-def check(plan, plan_dir, root, root_is_guess):
+def check(plan, plan_dir, layout_root, git_root_path, root_is_guess, required):
     f = []
     add = lambda i, s, l, m: f.append(Finding(i, s, l, m))
 
@@ -386,8 +440,8 @@ def check(plan, plan_dir, root, root_is_guess):
         )
 
     # E002
-    if root:
-        expected = os.path.normpath(os.path.join(root, plan_dir))
+    if layout_root:
+        expected = os.path.normpath(os.path.join(layout_root, plan_dir))
         actual = os.path.dirname(plan.path)
         if os.path.normpath(actual) != expected:
             add(
@@ -470,7 +524,7 @@ def check(plan, plan_dir, root, root_is_guess):
 
     # E008
     for ms in plan.milestones:
-        if field_value(ms["body"], "Exit Criteria") is None:
+        if field_value(milestone_level_body(ms["body"]), "Exit Criteria") is None:
             add(
                 "E008",
                 "error",
@@ -479,8 +533,8 @@ def check(plan, plan_dir, root, root_is_guess):
             )
 
     # E009
-    for required in REQUIRED_SECTIONS:
-        options = required if isinstance(required, tuple) else (required,)
+    for required_slot in required:
+        options = ("Milestones", "Tasks") if required_slot == "Milestones or Tasks" else (required_slot,)
         if not any(o in plan.sections for o in options):
             add(
                 "E009",
@@ -490,13 +544,13 @@ def check(plan, plan_dir, root, root_is_guess):
             )
 
     # E010
-    if root:
+    if git_root_path:
         changelogs = [
-            n for n in os.listdir(root) if n.upper().startswith("CHANGELOG")
+            n for n in os.listdir(git_root_path) if n.upper().startswith("CHANGELOG")
         ]
         if changelogs:
             step_text = "\n".join(
-                line for t in plan.tasks for _, line in t["body"]
+                line for t in plan.tasks for line in task_steps(t["body"])
             )
             if "changelog" not in step_text.lower():
                 add(
@@ -509,7 +563,7 @@ def check(plan, plan_dir, root, root_is_guess):
 
     # E011 / W003
     forms = evidence_forms(plan)
-    existing = named_existing_files(plan, root)
+    existing = named_existing_files(plan, layout_root)
     if not forms:
         if existing:
             add(
@@ -540,9 +594,9 @@ def check(plan, plan_dir, root, root_is_guess):
             )
 
     # W001
-    if root and "Tracking" in plan.metadata:
+    if git_root_path and "Tracking" in plan.metadata:
         declared = plan.metadata["Tracking"].split()[0] if plan.metadata["Tracking"] else ""
-        tracked = is_tracked(root, plan.path)
+        tracked = is_tracked(git_root_path, plan.path)
         if declared == "tracked" and not tracked:
             add("W001", "warning", 0, "Tracking says tracked but git does not track this file")
         elif declared == "untracked" and tracked:
@@ -630,6 +684,11 @@ def main(argv=None):
     p.add_argument("--version", action="version", version="check-plan.py " + VERSION)
     args = p.parse_args(argv)
 
+    normalized_dir = os.path.normpath(args.dir)
+    if os.path.isabs(args.dir) or normalized_dir == ".." or normalized_dir.startswith(".." + os.sep):
+        sys.stderr.write("error: --dir must be a relative path within the repository\n")
+        return 64
+
     path = os.path.abspath(args.plan)
     if not os.path.isfile(path):
         sys.stderr.write("error: no such plan file: %s\n" % args.plan)
@@ -640,23 +699,26 @@ def main(argv=None):
         sys.stderr.write("error: cannot read %s: %s\n" % (args.plan, exc))
         return 66
 
-    root = git_root(path)
-    root_is_guess = False
-    if root is None:
+    real_git_root = git_root(path)
+    root_is_guess = real_git_root is None
+    layout_root = real_git_root
+    if layout_root is None:
         # Outside a git repository: guess the root from the plan's own location
         # and downgrade E002 rather than inventing an answer.
-        root = os.path.dirname(os.path.dirname(path))
-        root_is_guess = True
+        layout_root = guessed_layout_root(path, args.dir)
         sys.stderr.write(
             "note: not inside a git repository; assuming root %s, E002 downgraded to a "
-            "warning, W001 and E010 skipped\n" % root
+            "warning, W001 and E010 skipped\n" % layout_root
         )
 
+    try:
+        required = required_sections()
+    except RuntimeError as exc:
+        sys.stderr.write("error: checker configuration: %s\n" % exc)
+        return 65
+
     plan = Plan(path, text)
-    findings = check(
-        plan, args.dir, None if root_is_guess and not os.path.isdir(root) else root,
-        root_is_guess,
-    )
+    findings = check(plan, args.dir, layout_root, real_git_root, root_is_guess, required)
 
     if args.strict:
         for finding in findings:

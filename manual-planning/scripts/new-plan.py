@@ -133,6 +133,11 @@ def main(argv=None):
     p.add_argument("--force", action="store_true", help="overwrite an existing plan file")
     args = p.parse_args(argv)
 
+    normalized_dir = os.path.normpath(args.dir)
+    if os.path.isabs(args.dir) or normalized_dir == ".." or normalized_dir.startswith(".." + os.sep):
+        sys.stderr.write("error: --dir must be a relative path within the repository\n")
+        return 64
+
     slug = slugify(args.title)
     if not slug:
         sys.stderr.write(
@@ -224,12 +229,13 @@ def main(argv=None):
             "%s : tracked (%s); git state left untouched\n" % (args.dir, reason)
         )
     else:
+        display_dir = args.dir.rstrip("/") + "/"
         sys.stderr.write(
             "%s : not tracked, not excluded\n"
             "-> the plan will appear as `??` in git status\n"
-            "   --exclude-locally   append %s/ to .git/info/exclude\n"
+            "   --exclude-locally   append %s to .git/info/exclude\n"
             "   --tracked           this project commits plans; leave git alone\n"
-            % (args.dir, args.dir.rstrip("/"))
+            % (display_dir, display_dir)
         )
     return 0
 
