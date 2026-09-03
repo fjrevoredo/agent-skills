@@ -1,0 +1,79 @@
+{
+  "skill_name": "app-runner",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I just fixed the CSV export command in our CLI. Can you run it and confirm it actually produces a correct file, not just that the build passes?",
+      "should_trigger": true,
+      "expected_output": "Agent checks for an existing project skill first, finds none, follows references/cli.md: builds/installs the tool, confirms it resolves on PATH, runs the export command against a realistic input file, and inspects the actual output file and exit code rather than only reporting that tests pass.",
+      "assertions": [
+        "Agent runs the CLI against real input rather than only running the test suite",
+        "Agent reports the actual command output or resulting file contents, not just an exit code",
+        "Agent checks the exit code of the invocation"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Start the API and hit the /orders/:id endpoint I just changed — I want to see the real response before I open a PR.",
+      "should_trigger": true,
+      "expected_output": "Agent follows references/server.md: launches the server in the background (not a blocking foreground command), polls a readiness endpoint instead of using a fixed sleep, curls the specific /orders/:id route that changed and reads the response body, then stops the server via its port's listener rather than a broad pkill.",
+      "assertions": [
+        "The server is launched with a backgrounding mechanism (e.g. trailing &) rather than a blocking foreground command",
+        "Readiness is confirmed via a polling loop against a health or readiness signal, not a fixed sleep with no check",
+        "The curl or equivalent request targets the specific changed route, not only a generic /health check",
+        "The server is stopped via a captured PID or the port's listener (e.g. lsof -ti:PORT), not a broad pkill -f pattern"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Spin up the frontend dev server and take a screenshot of the new settings page after I toggle dark mode.",
+      "should_trigger": true,
+      "expected_output": "Agent follows references/browser.md: background-launches the dev server with a curl-poll readiness check (per server.md), drives a headless browser to navigate to the settings page, waits for the relevant element, performs the toggle interaction through the automation tool's fill/click action, takes a screenshot, checks console/network errors, and actually looks at the screenshot before declaring success.",
+      "assertions": [
+        "The dev server is launched in the background with a polling readiness check, not a fixed sleep",
+        "The agent performs a real interaction (click/toggle) via a browser-automation action rather than skipping straight to a screenshot of the default state",
+        "A screenshot is captured and the agent describes what it actually shows",
+        "The agent checks for console or network errors before declaring the page working"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Can you launch the notification-service and confirm my change to the retry logic works end to end?",
+      "should_trigger": true,
+      "expected_output": "Agent's Step 1 check finds an existing project skill under one of the checked skill-directory conventions (e.g. .claude/skills/run-notification-service/SKILL.md) whose description covers launching this service, and the agent follows it verbatim rather than falling through to the built-in server.md dispatch pattern.",
+      "assertions": [
+        "Agent locates and reads the existing project-level run skill before doing anything else",
+        "The launch steps taken match the commands documented in the existing project skill",
+        "Agent does not silently reinvent a different launch sequence from references/server.md instead of the found skill"
+      ],
+      "files": [
+        ".claude/skills/run-notification-service/SKILL.md"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Run the test suite and tell me if it passes.",
+      "should_trigger": false,
+      "expected_output": "Agent runs the existing automated test suite directly (e.g. the project's test runner) rather than invoking this skill — no app is launched or driven, this is a plain test-suite run.",
+      "assertions": [
+        "Agent does not attempt to launch or background-start the application",
+        "Agent does not produce a screenshot or manual curl of a running instance"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Review this PR and tell me if the retry logic looks right.",
+      "should_trigger": false,
+      "expected_output": "Agent performs a code review of the diff — reads the changed files and reasons about correctness — rather than launching or driving a running instance of the app.",
+      "assertions": [
+        "Agent does not launch or background-start any process",
+        "Agent's response is based on reading the code/diff, not on runtime output from a launched app"
+      ],
+      "files": []
+    }
+  ]
+}
