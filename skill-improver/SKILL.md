@@ -9,7 +9,7 @@ description: |
   edits directly. For structural changes, produces a plan. Use this whenever a task
   surfaced gaps in tooling, documentation, or automation.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Skill Improver
@@ -146,4 +146,6 @@ If a plan was created, add: `**Plan:** docs/plan-name.md — awaiting approval.`
 
 - If a `manual-planning` skill is available, use it for structural changes
 - If a `todo-manager` skill is available, use it if the reflection surfaces new TODO items
+- If a `session-telemetry` skill is available and the session worked on a plan, cite
+  `telemetry.py report <plan-file>` findings in Step 1
 - Fall back to a simple Markdown plan if neither skill is present

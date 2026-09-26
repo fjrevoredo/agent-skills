@@ -1,0 +1,96 @@
+{
+  "skill_name": "session-telemetry",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "How long did docs/plans/2026-09-02-sample-refactor-plan.md actually take? I feel like it dragged.",
+      "should_trigger": true,
+      "expected_output": "Agent runs telemetry.py report on the plan, checks the coverage line and the --sessions listing for false positives, then reports attended vs agent-busy time, prompts, autonomous-run median and the findings.",
+      "assertions": [
+        "scripts/telemetry.py report is run with the plan file as its argument",
+        "The answer distinguishes attended time from agent-busy time",
+        "The answer cites at least one finding or states that none fired",
+        "No transcript text, prompt or session title is quoted"
+      ],
+      "files": ["docs/plans/2026-09-02-sample-refactor-plan.md"]
+    },
+    {
+      "id": 2,
+      "prompt": "Why was this plan so slow — was the work hard or was it the process?",
+      "should_trigger": true,
+      "expected_output": "Agent runs the report and reads it through the task-vs-process lens: busy/attended, autonomous runs, stop classes, resume KB and per-task shares.",
+      "assertions": [
+        "scripts/telemetry.py report is run",
+        "The answer states whether task slowness or process slowness dominates and names the numbers behind it",
+        "Per-task shares are cited when one task exceeds 30% of active time"
+      ],
+      "files": ["docs/plans/2026-09-02-sample-refactor-plan.md"]
+    },
+    {
+      "id": 3,
+      "prompt": "The plan is COMPLETED. Close out its session telemetry and add it to the ledger.",
+      "should_trigger": true,
+      "expected_output": "Agent runs telemetry.py close on the plan, which writes the subject JSON and upserts one ledger row under the user-level storage, then pastes the printed summary into the archive stub or Final Verification.",
+      "assertions": [
+        "scripts/telemetry.py close is run with the plan file",
+        "Nothing is written inside the repository except the pasted summary",
+        "The summary is at most 5 lines"
+      ],
+      "files": ["docs/plans/2026-09-02-sample-refactor-plan.md"]
+    },
+    {
+      "id": 4,
+      "prompt": "Compare plan performance before and after the manual-planning 2.1 change. Did it help?",
+      "should_trigger": true,
+      "expected_output": "Agent runs telemetry.py baseline, reports medians per Plan Format cohort, and refuses to conclude for any cohort under 3 plans.",
+      "assertions": [
+        "scripts/telemetry.py baseline is run",
+        "Only medians are reported, never means",
+        "A cohort with fewer than 3 plans is reported as 'do not conclude'",
+        "Quality guards (reverts, TODOs) are mentioned alongside the friction numbers"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Show me the session telemetry sources on this machine — is OpenCode being picked up?",
+      "should_trigger": true,
+      "expected_output": "Agent runs telemetry.py sources and reports which stores exist, their shape and session counts.",
+      "assertions": [
+        "scripts/telemetry.py sources is run",
+        "No transcript content is printed"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Our API endpoint is slow — can you profile the request handler?",
+      "should_trigger": false,
+      "expected_output": "A code profiling task. session-telemetry is not used: it measures coding sessions, not application performance.",
+      "assertions": [
+        "scripts/telemetry.py is not run"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "Add OpenTelemetry tracing to the checkout service.",
+      "should_trigger": false,
+      "expected_output": "An application instrumentation task; the word telemetry refers to the product, not to agent sessions.",
+      "assertions": [
+        "scripts/telemetry.py is not run"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Show me the last prompt I sent in yesterday's session.",
+      "should_trigger": false,
+      "expected_output": "session-telemetry never prints prompts or transcript text, so it is not the tool for this; the agent answers by other means or explains where transcripts live.",
+      "assertions": [
+        "scripts/telemetry.py is not run to retrieve prompt text"
+      ],
+      "files": []
+    }
+  ]
+}
