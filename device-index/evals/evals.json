@@ -1,0 +1,185 @@
+{
+  "skill_name": "device-index",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I just got a new MacBook. Can you set things up so Claude Code and pi know what's installed and where my repos are?",
+      "should_trigger": true,
+      "expected_output": "Agent checks for an existing index (create mode), runs scripts/probe.sh, drafts facts and open questions, then starts the interview before writing anything.",
+      "assertions": [
+        "scripts/probe.sh is run before any question about the machine",
+        "The agent states create mode or update mode",
+        "No file under ~/.device or any agent instruction file is written before the user approves a draft"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Build a device index for this machine.",
+      "should_trigger": true,
+      "expected_output": "Full workflow: mode, probe, interview rounds of at most 4 questions, drafts from assets/, write after approval, wiring, headless check.",
+      "assertions": [
+        "Each interview round asks at most 4 questions",
+        "Drafts are based on the assets/ templates and written to a scratch folder first",
+        "The wiring change for each agent is shown before it is applied"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "My ~/.device/INDEX.md is a few months old. Check what's stale and update it.",
+      "should_trigger": true,
+      "expected_output": "Update mode: reads the index files, runs probe.sh and probe.sh --check-index on each, interviews only on differences and stale lines, drafts edits to the existing files.",
+      "assertions": [
+        "scripts/probe.sh --check-index is run on each index file",
+        "Questions cover only differences, stale lines or missing sections",
+        "A backup of each replaced file is made before writing"
+      ],
+      "files": ["~/.device/INDEX.md"]
+    },
+    {
+      "id": 4,
+      "prompt": "Agents on this laptop keep using the wrong JDK and JAVA_HOME is always empty in their shells. Can we write down how the toolchain is wired so every agent gets it right?",
+      "should_trigger": true,
+      "expected_output": "Agent runs the probe (languages, envgap), finds the real JDK manager location and missing variables, tests an activation snippet in the agent shell, and records it in toolchains.md behind a pointer in INDEX.md.",
+      "assertions": [
+        "probe.sh envgap output (or --section envgap) is used",
+        "The activation snippet is executed in the agent shell before it is written down",
+        "The snippet lands in toolchains.md, not in INDEX.md"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "I want my coding agents to know which kubectl contexts are production on this machine.",
+      "should_trigger": true,
+      "expected_output": "Agent probes clusters (context names only), asks which contexts are prod including ones without 'prod' in the name, records them as facts in the index, and proposes the 'no side effects on prod' rule for the instruction files.",
+      "assertions": [
+        "Only context names are read; no kubectl command contacts a cluster or switches context",
+        "The user is asked about contexts whose name lacks 'prod'",
+        "The prod rule is proposed for an agent instruction file, not written into the index"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Wire my device index into OpenCode too, it only works in Claude Code right now.",
+      "should_trigger": true,
+      "expected_output": "Agent reads references/wiring.md, proposes an instructions entry with an absolute path in opencode.json (keeping existing keys) plus the topic and rule lines in ~/.config/opencode/AGENTS.md, applies after approval, and runs the headless check or opencode debug config.",
+      "assertions": [
+        "The proposed opencode.json keeps every existing key",
+        "The instructions entry uses an absolute path",
+        "The agent does not rely on an @ import for OpenCode"
+      ],
+      "files": ["~/.config/opencode/opencode.json"]
+    },
+    {
+      "id": 7,
+      "prompt": "Write a file that tells all my AI agents about this computer: shells, docker setup, where secrets live, which apps I use.",
+      "should_trigger": true,
+      "expected_output": "Device index workflow; secrets are recorded only as where they live.",
+      "assertions": [
+        "No secret value, token or env var value appears in any draft",
+        "Secrets appear only as the manager or location",
+        "Package and app lists are replaced by the command that lists them"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Can you survey this machine read-only and tell me what an agent would need to know to work here?",
+      "should_trigger": true,
+      "expected_output": "Agent runs probe.sh and the follow-ups from references/exploration.md, reports draft facts and open questions per section, and offers the interview.",
+      "assertions": [
+        "No command with side effects is run (no start, login, install, context switch)",
+        "The report groups findings by probe section",
+        "Open questions are listed separately from facts"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "Is my device index still loaded by pi and Claude? Verify it.",
+      "should_trigger": true,
+      "expected_output": "Agent runs the headless check from references/wiring.md from a neutral folder with a question only the index answers and compares the answers with the index.",
+      "assertions": [
+        "claude -p and pi -p are run from a neutral folder",
+        "The question asks for a fact only the index holds",
+        "Each answer is compared with the index text"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "Write an AGENTS.md for this repository describing the build and test commands.",
+      "should_trigger": false,
+      "expected_output": "Project-level AGENTS.md work; the device-index skill is not used.",
+      "assertions": ["The device-index skill is not invoked"],
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "Install Java 21 with SDKMAN for this project.",
+      "should_trigger": false,
+      "expected_output": "Toolchain installation; the agent may read an existing device index but does not build or update one.",
+      "assertions": ["The device-index skill is not invoked"],
+      "files": []
+    },
+    {
+      "id": 12,
+      "prompt": "Help me set up my dotfiles repo with GNU stow.",
+      "should_trigger": false,
+      "expected_output": "Dotfiles setup; the device-index skill is not used.",
+      "assertions": ["The device-index skill is not invoked"],
+      "files": []
+    },
+    {
+      "id": 13,
+      "prompt": "Update the README of this repo with setup instructions.",
+      "should_trigger": false,
+      "expected_output": "README editing; the device-index skill is not used.",
+      "assertions": ["The device-index skill is not invoked"],
+      "files": ["README.md"]
+    },
+    {
+      "id": 14,
+      "prompt": "Switch my kubectl context to staging and list the pods.",
+      "should_trigger": false,
+      "expected_output": "Cluster operation; the device-index skill is not used.",
+      "assertions": ["The device-index skill is not invoked"],
+      "files": []
+    },
+    {
+      "id": 15,
+      "prompt": "Add the GitHub MCP server to Claude Code.",
+      "should_trigger": false,
+      "expected_output": "MCP configuration; the device-index skill is not used.",
+      "assertions": ["The device-index skill is not invoked"],
+      "files": []
+    },
+    {
+      "id": 16,
+      "prompt": "Create a CLAUDE.md for this project with our coding conventions.",
+      "should_trigger": false,
+      "expected_output": "Project instructions; the device-index skill is not used.",
+      "assertions": ["The device-index skill is not invoked"],
+      "files": []
+    },
+    {
+      "id": 17,
+      "prompt": "Generate a Brewfile from what's installed on this Mac.",
+      "should_trigger": false,
+      "expected_output": "Package export with brew bundle dump; the device-index skill is not used.",
+      "assertions": ["The device-index skill is not invoked"],
+      "files": []
+    },
+    {
+      "id": 18,
+      "prompt": "The Gradle build fails with 'Unsupported class file major version'. Fix it.",
+      "should_trigger": false,
+      "expected_output": "Build debugging; the agent may read an existing device index for the JDK setup but does not build or update one.",
+      "assertions": ["The device-index skill is not invoked"],
+      "files": []
+    }
+  ]
+}
