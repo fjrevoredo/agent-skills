@@ -1,0 +1,7 @@
+{
+  "name": "agent-feedback",
+  "version": "1.0.0",
+  "description": "Capture friction with the agent setup (instructions, skills, tools, docs, knowledge, access, a repo's dev tooling) as local feedback entries, to process later.",
+  "author": { "name": "Francisco J. Revoredo" },
+  "license": "MIT"
+}

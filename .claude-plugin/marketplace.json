@@ -1,0 +1,16 @@
+{
+  "name": "agent-skills",
+  "owner": {
+    "name": "Francisco J. Revoredo"
+  },
+  "metadata": {
+    "description": "Francisco's agent skills and plugins."
+  },
+  "plugins": [
+    {
+      "name": "agent-feedback",
+      "source": "./agent-feedback",
+      "description": "Capture friction with the agent setup as local feedback entries, to process later."
+    }
+  ]
+}

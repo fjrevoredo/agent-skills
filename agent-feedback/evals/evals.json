@@ -1,0 +1,121 @@
+{
+  "skill_name": "agent-feedback:capture",
+  "model": "haiku",
+  "scenarios": [
+    {
+      "id": "stale-instruction",
+      "prompt": "Run the tests and tell me whether they pass.",
+      "allowed_tools": [
+        "Bash(python3 *)",
+        "Bash(ls *)",
+        "Bash(cat *)",
+        "Bash(./scripts/*)"
+      ],
+      "files": {
+        "CLAUDE.md": "# Project\n\nRun the tests with `./scripts/run-tests.sh`.\n",
+        "calc.py": "def add(a, b):\n    return a + b\n",
+        "test_calc.py": "import unittest\nfrom calc import add\n\n\nclass T(unittest.TestCase):\n    def test_add(self):\n        self.assertEqual(add(2, 3), 5)\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+      },
+      "expect": {
+        "capture": true,
+        "source": [
+          "agent"
+        ],
+        "kind": [
+          "instruction",
+          "docs",
+          "tooling"
+        ]
+      }
+    },
+    {
+      "id": "user-correction",
+      "prompt": "Wrong file: you edited generated/models.py last time, but files under generated/ are rebuilt from schema.json and every hand edit is lost. Nothing in this repo's docs says so. Add an optional `email` string field to the User model, the right way this time.",
+      "allowed_tools": [
+        "Edit",
+        "Write",
+        "Bash(ls *)",
+        "Bash(cat *)"
+      ],
+      "files": {
+        "README.md": "# Users service\n\nModels live in `generated/models.py`.\n",
+        "schema.json": "{\n  \"User\": {\"name\": \"string\"}\n}\n",
+        "generated/models.py": "# Generated from schema.json. Do not edit.\nfrom dataclasses import dataclass\n\n\n@dataclass\nclass User:\n    name: str\n"
+      },
+      "expect": {
+        "capture": true,
+        "source": [
+          "agent",
+          "user"
+        ],
+        "kind": [
+          "docs",
+          "instruction",
+          "knowledge"
+        ]
+      }
+    },
+    {
+      "id": "missing-access",
+      "prompt": "Fetch https://example.com/ and tell me the page title. Use the web, not your memory.",
+      "allowed_tools": [],
+      "disallowed_tools": [
+        "WebFetch",
+        "WebSearch",
+        "Bash(curl *)",
+        "Bash(wget *)",
+        "Bash(python3 *)"
+      ],
+      "files": {
+        "README.md": "# Scratch\n"
+      },
+      "expect": {
+        "capture": true,
+        "source": [
+          "agent"
+        ],
+        "kind": [
+          "access",
+          "tooling"
+        ]
+      }
+    },
+    {
+      "id": "explicit-user",
+      "prompt": "Note this as feedback: the onboarding doc says to run `make setup`, but there is no Makefile in this repo. Nothing else to do.",
+      "allowed_tools": [],
+      "files": {
+        "README.md": "# Service\n\nOnboarding: run `make setup`.\n"
+      },
+      "expect": {
+        "capture": true,
+        "source": [
+          "user"
+        ],
+        "kind": [
+          "docs",
+          "tooling"
+        ]
+      }
+    },
+    {
+      "id": "negative-product-bug",
+      "prompt": "divide() in calc.py returns the wrong result for divide(7, 2). Fix it and run the tests.",
+      "allowed_tools": [
+        "Edit",
+        "Write",
+        "Bash(python3 *)",
+        "Bash(ls *)",
+        "Bash(cat *)"
+      ],
+      "files": {
+        "CLAUDE.md": "# Project\n\nRun the tests with `python3 -m unittest`.\n",
+        "calc.py": "def divide(a, b):\n    return a // b\n",
+        "test_calc.py": "import unittest\nfrom calc import divide\n\n\nclass T(unittest.TestCase):\n    def test_divide(self):\n        self.assertEqual(divide(6, 3), 2)\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+      },
+      "expect": {
+        "capture": false
+      }
+    }
+  ]
+}

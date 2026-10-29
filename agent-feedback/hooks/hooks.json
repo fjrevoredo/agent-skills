@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'agent-feedback: when you hit friction with the agent setup or a repo dev tooling (stale or wrong instruction or doc, a user correction, a workaround, a denied tool call or missing access, a misbehaving tool or skill), record it right away with the agent-feedback:capture skill, then continue the task.'"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/capture/scripts/capture.py\" session-end",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
