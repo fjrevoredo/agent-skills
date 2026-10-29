@@ -11,6 +11,11 @@
       "name": "agent-feedback",
       "source": "./agent-feedback",
       "description": "Capture friction with the agent setup as local feedback entries, to process later."
+    },
+    {
+      "name": "needs-you",
+      "source": "./needs-you",
+      "description": "A macOS popup while a Claude Code session waits for you (approval, question, MCP prompt, plain-text gate); closes itself once you answer."
     }
   ]
 }
