@@ -8,10 +8,10 @@ knowledge, a repo's test or build tooling. Entries pile up locally and are proce
 
 ```bash
 claude plugin marketplace add https://github.com/fjrevoredo/agent-skills.git
-claude plugin install agent-feedback@agent-skills
+claude plugin install agent-feedback@fjrevoredo-agent-skills
 ```
 
-Uninstall with `claude plugin uninstall agent-feedback@agent-skills`.
+Uninstall with `claude plugin uninstall agent-feedback@fjrevoredo-agent-skills`.
 
 ## What it contains
 
