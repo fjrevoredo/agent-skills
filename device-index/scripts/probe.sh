@@ -3,7 +3,7 @@
 # Read-only survey of a developer machine for the device-index skill.
 # Runs on macOS /bin/bash 3.2 and Linux bash. No side effects, no secret values.
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 MAX=12          # items shown per list
 PARTIAL=0       # set to 1 when a section times out or fails
 SHELL_TO_PROBE="${SHELL:-}"
@@ -122,12 +122,22 @@ s_index() {
   if [ -e "$HOME/.device" ]; then
     kv device_dir "$(tilde "$(link_info "$HOME/.device")")"
     kv files "$(ls -1 "$HOME/.device" 2>/dev/null | cap_list)"
+    if [ -f "$HOME/.device/INDEX.md" ]; then
+      local k v
+      for k in Verified Host OS; do
+        v="$(head -15 "$HOME/.device/INDEX.md" | sed -n -E "s/^[[:space:]]*-?[[:space:]]*${k}:[[:space:]]*//p" | head -1 | tr -d '\`')"
+        kv "index_header_$(printf '%s' "$k" | tr 'A-Z' 'a-z')" "${v:-absent}"
+      done
+      kv index_lines "$(wc -l <"$HOME/.device/INDEX.md" | tr -d ' ')"
+    fi
   else
     kv device_dir "absent"
   fi
   local f
-  for f in "$HOME/.claude/CLAUDE.md" "$HOME/.pi/agent/AGENTS.md" "$HOME/.pi/agent/CLAUDE.md" \
-           "$HOME/.config/opencode/AGENTS.md" "$HOME/.codex/AGENTS.md" "$HOME/.gemini/GEMINI.md"; do
+  for f in "$HOME/.claude/CLAUDE.md" "$HOME"/.claude/rules/*.md "$HOME/.pi/agent/AGENTS.md" \
+           "$HOME/.pi/agent/AGENTS.local.md" "$HOME/.pi/agent/CLAUDE.md" \
+           "$HOME/.config/opencode/AGENTS.md" "$HOME"/.config/opencode/profiles/*/AGENTS.md \
+           "$HOME/.codex/AGENTS.md" "$HOME/.gemini/GEMINI.md"; do
     [ -f "$f" ] || continue
     if grep -q -E '\.device|device index|INDEX\.md' "$f" 2>/dev/null; then
       kv "pointer $(tilde "$f")" "yes: $(grep -n -E '\.device|INDEX\.md' "$f" | head -3 | cut -c1-120 | tr '\n' ' ')"
@@ -138,7 +148,8 @@ s_index() {
   for f in "$HOME/.config/opencode/opencode.json" "$HOME/.config/opencode/opencode.jsonc"; do
     [ -f "$f" ] || continue
     if grep -q '"instructions"' "$f"; then
-      kv "opencode_instructions $(tilde "$f")" "$(grep -A4 '"instructions"' "$f" | tr -d '\n' | tr -s ' ' | cut -c1-160)"
+      # Only the instructions array: the same file can hold API keys or passwords.
+      kv "opencode_instructions $(tilde "$f")" "$(tr -d '\n' <"$f" | grep -o '"instructions"[[:space:]]*:[[:space:]]*\[[^]]*\]' | head -1 | tr -s ' ' | cut -c1-200)"
     else
       kv "opencode_instructions $(tilde "$f")" "none"
     fi
@@ -147,6 +158,7 @@ s_index() {
 
 s_os() {
   section os
+  kv hostname "$(uname -n)"
   kv kernel "$OS $(uname -r) $(uname -m)"
   kv user "$(id -un)"
   kv home "$HOME"

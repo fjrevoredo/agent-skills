@@ -3,9 +3,11 @@
 Back to [INDEX.md](INDEX.md).
 
 <!-- Only when the user has many repos and a grouping that folder names don't show.
-     Delete all comments. -->
+     Pick ONE of the two layouts below and delete the other. Delete all comments. -->
 
-~<count> git repos (<host>). <env var that points here, and whether agent shells get it>
+~<count> git repos. <env var that points here, and whether agent shells get it>
+
+<!-- ============ Layout A: a grouping the user defines (team, product, capability) ============ -->
 
 ## <Grouping>: the main grouping
 
@@ -31,6 +33,23 @@ One <group> spreads over several repos:
 | <Group> | Host group | Local repos |
 |---|---|---|
 | `<id>` | `<host group>` | `<repo>`, `<repo>` |
+
+<!-- ============ Layout B: grouped by origin host and group ============ -->
+
+## Grouped by origin
+
+**The local layout is <flat | nested>.** The group of a folder is the first path part of its
+origin URL: `git -C <repo> remote get-url origin`. What each group is for: <where that is
+recorded, for example a knowledge-store page `<page id>`; do not repeat it here>.
+
+| Host / group | Repos | Local repos (or "see `git remote`") |
+|---|---|---|
+| `<host>/<group>` | <count> | `<repo>`, `<repo>` |
+| `<host>/<owner>` (public, own) | <count> | … |
+| other owners (forks, clones) | <count> | … |
+| no `origin` (local only) | <count> | `<folder>`, … |
+
+New projects: <which group, which local folder>.
 
 ## Other repos
 

@@ -1,7 +1,8 @@
 # Exploration
 
-How to read `probe.sh` output, which follow-up probes to run per finding, and what to leave
-unread. Everything here is read-only: no installs, no logins, no `start`, no context switches.
+How to read the probe output (`probe.sh` on macOS/Linux, `probe.ps1` on Windows), which
+follow-up probes to run per finding, what to leave unread, and what to leave out of the index.
+Everything here is read-only: no installs, no logins, no `start`, no context switches.
 
 ## Never read or print
 
@@ -11,13 +12,35 @@ unread. Everything here is read-only: no installs, no logins, no `start`, no con
 - Environment variable values. Names are fine (`env | cut -d= -f1`); PATH entries are fine.
 - Command output that may carry tokens: `gh auth token`, `gcloud auth print-access-token`,
   `kubectl config view --raw`, `docker context inspect` (TLS material).
-- rc files in full. They often export tokens. Read their structure with values cut off:
+- Agent and app config files in full (`~/.config/opencode/*.json*`, `~/.claude.json`, MCP
+  configs): some hold API keys or plain-text passwords. Read one key in memory (`instructions`,
+  MCP server names) and print only that.
+- Windows: Credential Manager (`cmdkey /list` prints target names; that is the limit),
+  `%APPDATA%\gh\hosts.yml`, the registry under `HKCU:\Software\<vendor>` for tokens.
+- rc files and PowerShell profiles in full. They often export tokens. Read their structure with
+  values cut off:
 
   ```bash
   grep -n -E '^[[:space:]]*(export|alias|source|\.|eval|path|PATH|fpath|\$env)' ~/.zshrc | sed -E 's/=.*/=…/'
   ```
 
+  ```powershell
+  Select-String -Path $PROFILE -Pattern '^\s*(\$env:|Set-Alias|function|Import-Module|\. )' |
+    ForEach-Object { "$($_.LineNumber): $($_.Line -replace '=.*', '=…')" }
+  ```
+
 If a follow-up would need one of these, ask the user instead.
+
+## Leave out of the index
+
+Apply the per-line test ("one cheap command answers it → delete") and drop:
+
+- tools pinned by a version manager in each repo (the pin file says it),
+- tools that are the latest version everywhere and have no trap,
+- facts already in a repo's own files (README, AGENTS.md, build files),
+- session data: PIDs, uptime, load, the current directory, running containers,
+- counts that change often (package counts, app counts), and full lists,
+- hardware detail beyond one short machine line.
 
 ## Probe sections → follow-ups
 
@@ -126,3 +149,60 @@ ask whether a grouping exists (team, product, capability) that folder names don'
 ### synced
 Symlinks from `~` into cloud drives or dotfiles repos. Records where configs really live, and is
 the natural home for the index's source of truth (step 4).
+
+## Windows (`probe.ps1`) follow-ups
+
+Sections with the same name mean the same thing. Run follow-ups in pwsh; quote paths with spaces.
+
+### os
+One short machine line from `windows`, `model`, `cpu`. `mdm_enrollments` above 0 or
+`domain_joined: yes` → ask whether the machine is company-managed.
+
+### packages
+Record the manager and its list command (`winget list`, `scoop list`, `choco list`). Tools that
+winget installs as links sit in `winget_links`; their real folders are under
+`%LOCALAPPDATA%\Microsoft\WinGet\Packages`. `npm_global_prefix` under an NVM link folder changes
+with `nvm use`: record it.
+
+### languages
+- NVM for Windows: `nvm list`; the active version is the target of `NVM_SYMLINK`.
+- Python: `python_on_path_order`. When the WindowsApps stub comes first, `python` opens the
+  Store: record the real interpreter or `uv run`. `uv python list --only-installed` for versions.
+- Java: `jdks` folders vs `java_ambient` and `java_home_env`. IDE-managed JDKs in `~\.jdks` are
+  not on PATH; the activation is `$env:JAVA_HOME='<jdk>'; $env:PATH="$env:JAVA_HOME\bin;$env:PATH"`.
+  Test it in a pwsh command before you write it down.
+
+### containers
+`docker_daemon: unreachable` → record the start command (open Docker Desktop), don't run it.
+`wsl_distros` → which distro the runtime uses, and whether agents run commands inside WSL.
+
+### shells
+`claude_code_shell`, `this_shell`, `parent_process`. Ask which shell the terminal starts
+(`wezterm_default_prog`, `windows_terminal_default_profile`) and which shell each agent uses. A
+profile under OneDrive (`documents_redirected`) syncs between machines: record that.
+
+### envgap
+- `path_entries_missing_in_this_process` / `restart_needed: yes` → the harness started before an
+  install. Tell the user to restart it; record the trap in `toolchains.md`.
+- `ssh_order_this_process`, `git_bash_ssh`, `ssh_first_is_git` → record the binary agents must
+  call for SSH through an agent on the named pipe (`C:\Windows\System32\OpenSSH\ssh.exe`).
+- `vars_added_by_pwsh_profile` → variables agent PowerShell tools miss when they run with
+  `-NoProfile`. For each one a tool needs, record the activation.
+
+### secrets
+`openssh_agent_pipe` with `ssh_agent_service` stopped → the pipe belongs to another agent (often
+1Password). Ask the user which one, and the error text a locked vault gives.
+
+### synced
+Junctions and symlinks (`~/.claude/skills/*` → `~/.agents/skills/*`, rc files into a dotfiles
+repo). Record where the real files live.
+
+### agents
+Same as above. Also `opencode_profiles` and `opencode_config_dir_env`: a profile with its own
+AGENTS.md hides the global one (see `wiring.md`). `pi_agents_local_md: present` → pi's AGENTS.md
+may be generated; wire through the overlay.
+
+### repos
+`root <dir>` lines list origin `host/group` counts. Many groups under one root → offer the
+"grouped by origin" layout of `assets/paths-template.md`. What a group is for is a question for the
+user (or the companion store), not for the probe.
