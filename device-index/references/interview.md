@@ -5,6 +5,10 @@ sections in this order; skip a section the user marks N/A.
 
 ## How each round works
 
+0. With a companion profile: read the store's page for this machine first. A question it already
+   answers is not asked; show the answer with its fact ID instead, and link that ID in the draft
+   (never copy the claim). Ask only when the probe contradicts the store, and note the conflict as
+   a durable candidate for the store.
 1. Show the draft facts for the section in a short list, with evidence for anything surprising.
 2. Ask up to 4 questions. Put your recommended answer first and say why. Prefer a confirm/correct
    question built from evidence ("Colima is your only container runtime. Right?") over an open one.
@@ -32,12 +36,13 @@ The user often answers with a rule. Split it:
 Each section lists what the probe usually settles and what to ask.
 
 ### Machine
-- Found: model, OS, MDM, VPN app.
+- Found: model, OS, MDM, VPN app. The companion store often owns the machine's role and identity.
 - Ask: work, personal or both? Which resources need the VPN (databases, internal UIs, cluster APIs)?
 
 ### Where things go
 - Found: repo roots with counts and git hosts; symlinked config.
-- Ask: purpose of each root; where new work, personal and throwaway projects go; legacy or
+- Ask: purpose of each root; what each origin group is for (unless the companion store says it);
+  where new work, personal and throwaway projects go; legacy or
   tool-generated dirs agents should ignore; whether a grouping exists that folder names don't show
   (→ `paths.md`); other knowledge stores agents should read (team knowledge base, work log).
 
@@ -75,7 +80,8 @@ Each section lists what the probe usually settles and what to ask.
 ### Agents
 - Found: installed agents, versions, instruction files, skill dirs, MCP server names.
 - Ask: connectors or MCP servers the probe can't see; how skills are shared between agents;
-  multi-agent tooling; which agents to wire in step 5.
+  multi-agent tooling; which agents to wire in step 5 (multi-select, detected agents only); the
+  shell each agent uses on Windows.
 
 ## Done
 
