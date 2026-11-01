@@ -3,19 +3,20 @@ name: device-index
 description: |
   Build or refresh a device index: a short, always-loaded file of machine facts (paths,
   toolchains, shells, containers, clusters, services, apps, agents) plus topic files read on demand,
-  and wire the coding agents the user picks (Claude Code, OpenCode, pi) to load it. Works on macOS,
-  Linux and Windows. Explores read-only, interviews the user, and writes only after approval.
+  and wire the coding agents the user picks (Claude Code, OpenCode, pi, Hermes) to load it.
+  Works on macOS, Linux and Windows. Explores read-only, interviews the user, and writes only
+  after approval.
   Use it when the user wants coding agents to know this machine, sets up a new
   laptop or PC for agents, asks to create, update or check a device index or ~/.device, or when
   agents keep failing on machine facts (wrong JDK, empty JAVA_HOME in agent shells, wrong ssh
   binary, stale PATH). Not for a single repo's AGENTS.md or CLAUDE.md.
   Triggers: device index, machine index, ~/.device, tell agents about my machine, new laptop for
-  agents, stale device index, agent shell env, wire index into Claude Code, OpenCode or pi.
+  agents, stale device index, agent shell env, wire index into Claude Code, OpenCode, pi or Hermes.
 compatibility: |
-  Claude Code, OpenCode, pi. probe.sh needs bash 3.2+ on macOS or Linux (jq optional).
+  Claude Code, OpenCode, pi, Hermes. probe.sh needs bash 3.2+ on macOS or Linux (jq optional).
   probe.ps1 needs PowerShell 7+ (pwsh) on Windows; Windows PowerShell 5.1 is not supported.
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # Device index
@@ -69,7 +70,8 @@ this paragraph.
 **Mode.** Look for `~/.device/` and for index pointers in the global instruction files
 (`<probe> --section index` lists them: `~/.claude/CLAUDE.md`, `~/.claude/rules/*.md`,
 `~/.config/opencode/AGENTS.md`, `instructions` in `~/.config/opencode/opencode.json(c)`,
-`~/.pi/agent/AGENTS.md`). An index lives elsewhere when a pointer names another path; use it.
+`~/.pi/agent/AGENTS.md`, the `AGENTS.md` in the Hermes gateway working folder). An index lives
+elsewhere when a pointer names another path; use it.
 
 - **Create mode:** no index. Run every step.
 - **Update mode:** an index exists. Read all its files first. Run `<probe>` and
@@ -251,6 +253,8 @@ to every draft line:
 - **OpenCode ignores `@file` imports** and reads only the first global AGENTS.md it finds; an
   `OPENCODE_CONFIG_DIR` profile with its own AGENTS.md hides `~/.config/opencode/AGENTS.md`.
   `instructions` entries are combined with AGENTS.md, so wire OpenCode through `instructions`.
+- **Hermes reads context from the session's working folder.** Gateway sessions use
+  `terminal.cwd` (unset = home folder); cron jobs load none without a `workdir`. See `wiring.md`.
 - **Generated instruction files.** When a file says it is generated ("edit X, then rerun the
   bootstrap"), write to the local overlay the generator names, never to the output file.
 - **`--check-index` reports every missing backticked path**, and so does a companion store's

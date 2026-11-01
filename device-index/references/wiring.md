@@ -6,18 +6,19 @@ user approves it. To support a new agent, add one row here; the workflow does no
 
 ## Adapter table
 
-| | Claude Code | OpenCode | pi |
-|---|---|---|---|
-| Detect | `claude` on PATH or `~/.claude/` | `opencode` on PATH or `~/.config/opencode/` | `pi` on PATH or `~/.pi/agent/` |
-| File this skill writes | `~/.claude/rules/device-index.md` (whole file, owned by this skill) | `instructions` entry in `~/.config/opencode/opencode.json(c)`; topic and rule lines in `~/.config/opencode/AGENTS.md` | `~/.pi/agent/AGENTS.md`, or the local overlay a generator names (for example `AGENTS.local.md`) |
-| Pointer form | `@~/.device/INDEX.md` on its own line (an import) | `"~/.device/INDEX.md"` in `instructions` | `- Read \`~/.device/INDEX.md\` at the start of each session.` |
-| Load check | `/memory` in an interactive session lists the rules file and the imported index | `opencode debug config` shows the entry in `instructions` | — |
-| Headless check | `claude -p "<q>"` | `opencode run "<q>"` | `pi -p "<q>"` |
-| Skill dir | `~/.claude/skills/` | `~/.config/opencode/skills/`, `~/.claude/skills/`, `~/.agents/skills/` | `~/.agents/skills/` (auto), `~/.pi/agent/skills/` |
-| Agent shell on Windows | Bash tool: Git Bash (when Git for Windows is installed); PowerShell tool may also exist | Windows PowerShell 5.1 (observed on v2) | — |
+| | Claude Code | OpenCode | pi | Hermes |
+|---|---|---|---|---|
+| Detect | `claude` on PATH or `~/.claude/` | `opencode` on PATH or `~/.config/opencode/` | `pi` on PATH or `~/.pi/agent/` | `hermes` on PATH or `$HERMES_HOME` (default `~/.hermes`; Windows `%LOCALAPPDATA%\hermes`) |
+| File this skill writes | `~/.claude/rules/device-index.md` (whole file, owned by this skill) | `instructions` entry in `~/.config/opencode/opencode.json(c)`; topic and rule lines in `~/.config/opencode/AGENTS.md` | `~/.pi/agent/AGENTS.md`, or the local overlay a generator names (for example `AGENTS.local.md`) | `AGENTS.md` in the gateway folder (`hermes config get terminal.cwd`; unset or `.` = home folder) |
+| Pointer form | `@~/.device/INDEX.md` on its own line (an import) | `"~/.device/INDEX.md"` in `instructions` | `- Read \`~/.device/INDEX.md\` at the start of each session.` | Same line as pi |
+| Load check | `/memory` in an interactive session lists the rules file and the imported index | `opencode debug config` shows the entry in `instructions` | — | `/new`, one message, then `/context` in a messaging session: "Context files" lists `AGENTS.md` |
+| Headless check | `claude -p "<q>"` | `opencode run "<q>"` | `pi -p "<q>"` | `hermes chat --oneshot --quiet --source tool -q "<q>"`, run from the gateway folder |
+| Skill dir | `~/.claude/skills/` | `~/.config/opencode/skills/`, `~/.claude/skills/`, `~/.agents/skills/` | `~/.agents/skills/` (auto), `~/.pi/agent/skills/` | `$HERMES_HOME/skills/` |
+| Agent shell on Windows | Bash tool: Git Bash (when Git for Windows is installed); PowerShell tool may also exist | Windows PowerShell 5.1 (observed on v2) | — | — |
 
-Check versions before you rely on a row: `claude --version`, `opencode --version`, `pi --version`.
-The rows were verified on Claude Code 2.1 and OpenCode v2.2 (Windows 11).
+Check versions before you rely on a row: `claude --version`, `opencode --version`, `pi --version`,
+`hermes --version`. The rows were verified on Claude Code 2.1 and OpenCode v2.2 (Windows 11), and
+the Hermes row on Hermes Agent v0.22.5 (Linux).
 
 Later rows, not verified: **Codex** (`~/.codex/AGENTS.md`, or `$CODEX_HOME/AGENTS.md`), **Zed**
 (`~/.config/zed/AGENTS.md`). There is no standard global AGENTS.md path; each agent has its own.
@@ -101,6 +102,32 @@ says it is generated ("edit AGENTS.base.md and AGENTS.local.md, then rerun the b
 the block into the overlay it names and ask the user to rerun the generator; a direct edit is lost
 on the next run.
 
+## Hermes
+
+Hermes follows no imports and has no global instruction file. Each session loads one project
+context file from its working folder, first match: `.hermes.md` → `AGENTS.override.md` →
+`AGENTS.md` → `CLAUDE.md` → `.cursorrules`. Only `$HERMES_HOME/SOUL.md` loads in every session;
+it is the persona file, so keep the pointer out of it.
+
+- **Gateway sessions** (Telegram and other messaging platforms) use `terminal.cwd`; this is the
+  gateway folder. Read it with `hermes config get terminal.cwd`. Unset or `.` means the home
+  folder (docs; for `.`, the Hermes source and a live check), unless the legacy `MESSAGING_CWD`
+  is set. Unset or `.` → propose two changes together: `hermes config set terminal.cwd
+  <absolute HERMES_HOME>` with `hermes gateway restart`, and the block in
+  `<HERMES_HOME>/AGENTS.md`. Name the side effect: gateway terminal commands then start in that
+  folder. An absolute value → put the block in `<that folder>/AGENTS.md`.
+- **Shadowing.** Write into the first file of the order above that exists in the gateway folder:
+  a `.hermes.md` or `AGENTS.override.md` there hides `AGENTS.md`. When the folder is inside a git
+  repo, `.hermes.md` is searched up to the repo root, and `AGENTS.md` loads as a chain from the
+  root down; check that chain too.
+- **CLI sessions** use their launch folder: the pointer reaches only CLI sessions started there.
+- **Cron jobs** load no project context file unless the job has a `workdir`. Tell the user; a
+  `workdir` also moves where that job's tools run.
+- An injection scan blocks the whole file when a line matches a pattern (for example an example
+  command that reads `.env`). Keep the block to plain pointer and rule lines.
+- Context loads at session start. On a messaging platform, `/context` lists "Context files" only
+  after the first agent reply of the session.
+
 ## Merge rules
 
 - Prefer a whole file this skill owns (Claude Code rules file, an `instructions` file). Then
@@ -118,7 +145,9 @@ on the next run.
 When the user wants this skill on several agents: put it (or a link to it) in
 `~/.agents/skills/device-index`, and add `~/.claude/skills/device-index` → that folder (on Windows,
 a junction: `New-Item -ItemType Junction`). pi and OpenCode find `~/.agents/skills`; one more pi
-`settings.json` skill path to the same skill makes pi warn about a name collision.
+`settings.json` skill path to the same skill makes pi warn about a name collision. Hermes reads
+`$HERMES_HOME/skills/`; to share `~/.agents/skills`, add it to `skills.external_dirs` in
+`$HERMES_HOME/config.yaml`.
 
 ## Headless check
 
@@ -132,6 +161,7 @@ q='Answer from your loaded instructions only, without running tools: where is <f
 claude -p "$q"
 opencode run "$q"
 pi -p "$q"
+(cd "<gateway folder>" && hermes chat --oneshot --quiet --source tool -q "$q")  # Hermes: not the temp folder
 ```
 
 PowerShell: `Set-Location (New-Item -ItemType Directory (Join-Path $env:TEMP "di-$(Get-Random)"))`,

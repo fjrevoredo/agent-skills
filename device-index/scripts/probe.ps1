@@ -21,7 +21,7 @@ $ErrorActionPreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'
 $ConfirmPreference = 'None'
 
-$script:ProbeVersion = '1.2.0'
+$script:ProbeVersion = '1.3.0'
 $script:Partial = $false
 $script:AllSections = @('index', 'os', 'packages', 'languages', 'containers', 'shells', 'envgap',
     'secrets', 'synced', 'agents', 'apps', 'repos')
@@ -56,8 +56,9 @@ Output (stdout): "## <section>" headings, then "key: value" lines. Notes go to s
 Environment variable values are never printed (names only), except PATH entries in "envgap".
 Config and secret files are never read for output: only their names. Exceptions, read in
 memory for one field: "instructions" and MCP server key names in agent configs, git remote
-hosts (credentials stripped), the INDEX.md header lines, the default_prog line of a WezTerm
-config, and the default profile name in Windows Terminal settings.json.
+hosts (credentials stripped), the INDEX.md header lines, terminal.cwd in the Hermes
+config.yaml, the default_prog line of a WezTerm config, and the default profile name in
+Windows Terminal settings.json.
 "envgap" starts pwsh once with your profile under a 15 s watchdog.
 Tests: set PROBE_HOME to a fixture folder to read it instead of the user profile.
 
@@ -214,6 +215,39 @@ function Get-KeyNames($Table, [string]$Key) {
     return @()
 }
 
+# Hermes: home folder, the raw terminal.cwd value, and the folder gateway sessions load context
+# from. Reads only that one key of config.yaml; .env and auth.json are never read.
+# terminal.cwd is read only at the first child indent of "terminal:" (not terminal.docker.cwd).
+# Placeholders ".", "auto", "cwd" and unset resolve to the home folder on the local backend,
+# unless the legacy MESSAGING_CWD is set (Hermes gateway/cwd_placeholder.py).
+function Get-HermesHome {
+    if ($env:HERMES_HOME) { return $env:HERMES_HOME }
+    return (Join-Path $env:LOCALAPPDATA 'hermes')
+}
+function Get-HermesCwd {
+    $cfg = Join-Path (Get-HermesHome) 'config.yaml'
+    if (-not (Test-Path -LiteralPath $cfg)) { return '' }
+    $inTerminal = $false; $indent = -1
+    foreach ($raw in [System.IO.File]::ReadLines($cfg)) {
+        $line = $raw.TrimEnd("`r")
+        if ($line -match '^terminal:') { $inTerminal = $true; continue }
+        if (-not $inTerminal) { continue }
+        if ($line -match '^[^\s#]') { break }
+        if ($line -match '^(\s+)[^\s#]') {
+            $i = $Matches[1].Length
+            if ($indent -lt 0) { $indent = $i }
+            if ($i -eq $indent -and $line -match '^\s+cwd:\s*(.*?)(\s+#.*)?$') { return $Matches[1].Trim().Trim('"', "'") }
+        }
+    }
+    return ''
+}
+function Get-HermesContextDir {
+    $v = Get-HermesCwd
+    if ($v -in @('', '.', 'auto', 'cwd')) { return $script:HomeDir }
+    if ($v.StartsWith('~')) { return $script:HomeDir + $v.Substring(1) }
+    return $v
+}
+
 function Split-PathList([string]$Value) {
     if (-not $Value) { return @() }
     return @($Value -split ';' | Where-Object { $_ } | ForEach-Object { [Environment]::ExpandEnvironmentVariables($_).TrimEnd('\') })
@@ -261,6 +295,13 @@ function Invoke-SectionIndex {
     if (Test-Path -LiteralPath $profilesDir) {
         $files += @(Get-ChildItem -LiteralPath $profilesDir -Directory -Force -ErrorAction SilentlyContinue |
             ForEach-Object { Join-Path $_.FullName 'AGENTS.md' } | Where-Object { Test-Path -LiteralPath $_ })
+    }
+    if (Test-Path -LiteralPath (Get-HermesHome)) {
+        # Hermes: its home AGENTS.md, and the one gateway sessions load (terminal.cwd), when different.
+        $h1 = Join-Path (Get-HermesHome) 'AGENTS.md'
+        $h2 = Join-Path (Get-HermesContextDir) 'AGENTS.md'
+        $files += $h1
+        if ($h2 -ne $h1) { $files += $h2 }
     }
     foreach ($f in $files) {
         if (-not (Test-Path -LiteralPath $f -PathType Leaf)) { continue }
@@ -582,6 +623,25 @@ function Invoke-SectionAgents {
         Write-Kv 'pi_skills' (Format-Cap (Get-ChildNames (Join-Path $piDir 'skills')))
         $local = Join-Path $piDir 'AGENTS.local.md'
         if (Test-Path -LiteralPath $local) { Write-Kv 'pi_agents_local_md' 'present (local overlay; AGENTS.md may be generated)' }
+    }
+    $hermesHome = Get-HermesHome
+    if ((Test-Path -LiteralPath $hermesHome) -or (Test-Cmd 'hermes')) {
+        $hermesExe = Join-Path $hermesHome 'bin\hermes.exe'
+        if (Test-Cmd 'hermes') {
+            Write-Kv 'hermes' (Get-VerLine 'hermes' @('--version') 10)
+        } elseif (Test-Path -LiteralPath $hermesExe) {
+            $hv = @(Invoke-Ext -File $hermesExe -Arguments @('--version') -Seconds 10 -MergeStderr) | Select-Object -First 1
+            Write-Kv 'hermes' "$(Format-Tilde $hermesExe), not on this PATH ($(if ($hv) { $hv.Trim() } else { 'version unknown' }))"
+        } else {
+            Write-Kv 'hermes' 'absent'
+        }
+        Write-Kv 'hermes_home' (Format-Tilde $hermesHome)
+        $hc = Get-HermesCwd
+        $hcText = if ($hc -in @('', '.', 'auto', 'cwd')) {
+            "$(if ($hc) { $hc } else { 'unset' }) (gateway sessions load context from the home folder)"
+        } else { Format-Tilde $hc }
+        Write-Kv 'hermes_terminal_cwd' $hcText
+        Write-Kv 'hermes_skills' (Format-Cap (Get-ChildNames (Join-Path $hermesHome 'skills') -Directories))
     }
     Write-Kv 'shared_skills' (Format-Cap (Get-ChildNames (Join-Path $script:HomeDir '.agents\skills')))
     $other = @()

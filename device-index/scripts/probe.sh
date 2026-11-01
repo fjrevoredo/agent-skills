@@ -3,7 +3,7 @@
 # Read-only survey of a developer machine for the device-index skill.
 # Runs on macOS /bin/bash 3.2 and Linux bash. No side effects, no secret values.
 
-VERSION="1.2.0"
+VERSION="1.3.0"
 MAX=12          # items shown per list
 PARTIAL=0       # set to 1 when a section times out or fails
 SHELL_TO_PROBE="${SHELL:-}"
@@ -39,6 +39,7 @@ Sections:
 Output (stdout): "## <section>" headings, then "key: value" lines. Notes go to stderr.
 Values of environment variables are never printed (only names), except PATH entries in
 "envgap". Secret files (auth.json, .env, ~/.ssh/*, credential stores) are never read.
+Of the Hermes config.yaml, only the terminal.cwd value is read.
 "envgap" runs your shell's rc files (login + interactive) under a 15 s watchdog.
 
 Exit codes:
@@ -115,6 +116,38 @@ link_info() {
 
 tilde() { case "$1" in "$HOME"*) printf '~%s' "${1#"$HOME"}" ;; *) printf '%s' "$1" ;; esac; }
 
+# Hermes: home folder, the raw terminal.cwd value, and the folder gateway sessions load context
+# from. Reads only that one key of config.yaml; .env and auth.json are never read.
+# terminal.cwd is read only at the first child indent of "terminal:" (not terminal.docker.cwd).
+hermes_home() { printf '%s' "${HERMES_HOME:-$HOME/.hermes}"; }
+hermes_cwd() {
+  local cfg
+  cfg="$(hermes_home)/config.yaml"
+  [ -f "$cfg" ] || return 0
+  awk '{ sub(/\r$/, "") }
+    /^terminal:/ { t = 1; next }
+    t && /^[^[:space:]#]/ { exit }
+    t && /^[[:space:]]+[^[:space:]#]/ {
+      match($0, /^[[:space:]]+/)
+      if (!ind) ind = RLENGTH
+      if (RLENGTH == ind && $0 ~ /^[[:space:]]+cwd:/) {
+        sub(/^[[:space:]]+cwd:[[:space:]]*/, ""); sub(/[[:space:]]+#.*$/, "")
+        gsub(/^["\047]|["\047]$/, ""); print; exit
+      }
+    }' "$cfg"
+}
+# Placeholders ".", "auto", "cwd" and unset resolve to the home folder on the local backend,
+# unless the legacy MESSAGING_CWD is set (Hermes gateway/cwd_placeholder.py).
+hermes_ctx_dir() {
+  local v
+  v="$(hermes_cwd)"
+  case "$v" in
+    ""|.|auto|cwd) printf '%s' "$HOME" ;;
+    "~"*) printf '%s%s' "$HOME" "${v#\~}" ;;
+    *) printf '%s' "$v" ;;
+  esac
+}
+
 # Whole days from a YYYY-MM-DD date to today (UTC); empty when the date does not parse.
 # GNU date -d first, then BSD date -j -f (macOS).
 epoch_of() { date -u -d "$1" +%s 2>/dev/null || date -u -j -f %Y-%m-%d "$1" +%s 2>/dev/null; }
@@ -147,11 +180,17 @@ s_index() {
   else
     kv device_dir "absent"
   fi
-  local f
+  local f h1="" h2=""
+  if [ -d "$(hermes_home)" ]; then
+    # Hermes: its home AGENTS.md, and the one gateway sessions load (terminal.cwd), when different.
+    h1="$(hermes_home)/AGENTS.md"
+    h2="$(hermes_ctx_dir)/AGENTS.md"
+    [ "$h2" = "$h1" ] && h2=""
+  fi
   for f in "$HOME/.claude/CLAUDE.md" "$HOME"/.claude/rules/*.md "$HOME/.pi/agent/AGENTS.md" \
            "$HOME/.pi/agent/AGENTS.local.md" "$HOME/.pi/agent/CLAUDE.md" \
            "$HOME/.config/opencode/AGENTS.md" "$HOME"/.config/opencode/profiles/*/AGENTS.md \
-           "$HOME/.codex/AGENTS.md" "$HOME/.gemini/GEMINI.md"; do
+           "$HOME/.codex/AGENTS.md" "$HOME/.gemini/GEMINI.md" "$h1" "$h2"; do
     [ -f "$f" ] || continue
     if grep -q -E '\.device|device index|INDEX\.md' "$f" 2>/dev/null; then
       kv "pointer $(tilde "$f")" "yes: $(grep -n -E '\.device|INDEX\.md' "$f" | head -3 | cut -c1-120 | tr '\n' ' ')"
@@ -467,6 +506,23 @@ s_agents() {
     kv opencode_agents_md "$([ -f "$HOME/.config/opencode/AGENTS.md" ] && echo "present (turns off the ~/.claude/CLAUDE.md fallback)" || echo absent)"
     [ -f "$HOME/.config/opencode/opencode.json" ] && kv opencode_mcp "$(json_keys "$HOME/.config/opencode/opencode.json" .mcp)"
     kv opencode_skills "$(ls -1 "$HOME/.config/opencode/skills" 2>/dev/null | cap_list)"
+  fi
+  if [ -d "$(hermes_home)" ] || have hermes; then
+    if have hermes; then
+      kv hermes "$(ver_line hermes hermes --version)"
+    elif [ -x "$HOME/.local/bin/hermes" ]; then
+      kv hermes "$(tilde "$HOME/.local/bin/hermes"), not on this PATH ($(run_wd2 8 "$HOME/.local/bin/hermes" --version | head -1))"
+    else
+      kv hermes "absent"
+    fi
+    kv hermes_home "$(tilde "$(hermes_home)")"
+    local hc
+    hc="$(hermes_cwd)"
+    case "$hc" in
+      ""|.|auto|cwd) kv hermes_terminal_cwd "${hc:-unset} (gateway sessions load context from the home folder)" ;;
+      *) kv hermes_terminal_cwd "$(tilde "$hc")" ;;
+    esac
+    kv hermes_skills "$(ls -1 "$(hermes_home)/skills" 2>/dev/null | cap_list)"
   fi
   kv shared_skills "$(ls -1 "$HOME/.agents/skills" 2>/dev/null | cap_list)"
   kv other_agents "$( { [ -d "$HOME/.codex" ] && echo codex; [ -d "$HOME/.gemini" ] && echo gemini;

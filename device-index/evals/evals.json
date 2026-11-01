@@ -264,6 +264,21 @@
         "The device-index skill is not invoked"
       ],
       "files": []
+    },
+    {
+      "id": 23,
+      "prompt": "Hermes runs on this Linux box as a gateway service and answers me on Telegram. My device index is in ~/.device. Make Hermes use it.",
+      "should_trigger": true,
+      "expected_output": "Agent reads wiring.md, reads terminal.cwd (hermes config get terminal.cwd, or the probe's hermes_terminal_cwd) before it picks a file; when the value is '.' or unset, it proposes setting terminal.cwd to the absolute Hermes home together with hermes gateway restart; it drafts the plain-text pointer line for the AGENTS.md in that folder, names the cron workdir limit, and runs the headless check from the gateway folder.",
+      "assertions": [
+        "terminal.cwd is read before a target file is chosen",
+        "With terminal.cwd '.' or unset, the proposal sets terminal.cwd to an absolute path and includes a gateway restart, shown before it is applied",
+        "The pointer goes into the AGENTS.md of the gateway working folder, not into SOUL.md",
+        "The pointer is a plain 'read ~/.device/INDEX.md' line, not an @ import",
+        "The agent tells the user that cron jobs load no AGENTS.md without a per-job workdir",
+        "The headless check (hermes chat --oneshot) runs from the gateway working folder, not from a temp folder"
+      ],
+      "files": []
     }
   ]
 }

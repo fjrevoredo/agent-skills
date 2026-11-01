@@ -204,7 +204,8 @@ repo). Record where the real files live.
 ### agents
 Same as above. Also `opencode_profiles` and `opencode_config_dir_env`: a profile with its own
 AGENTS.md hides the global one (see `wiring.md`). `pi_agents_local_md: present` → pi's AGENTS.md
-may be generated; wire through the overlay.
+may be generated; wire through the overlay. `hermes_terminal_cwd` unset or `.` → the Hermes
+gateway loads context from the home folder (see `wiring.md`).
 
 ### repos
 `root <dir>` lines list origin `host/group` counts. Many groups under one root → offer the
