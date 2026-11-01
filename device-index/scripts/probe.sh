@@ -3,7 +3,7 @@
 # Read-only survey of a developer machine for the device-index skill.
 # Runs on macOS /bin/bash 3.2 and Linux bash. No side effects, no secret values.
 
-VERSION="1.1.0"
+VERSION="1.1.1"
 MAX=12          # items shown per list
 PARTIAL=0       # set to 1 when a section times out or fails
 SHELL_TO_PROBE="${SHELL:-}"
@@ -115,6 +115,16 @@ link_info() {
 
 tilde() { case "$1" in "$HOME"*) printf '~%s' "${1#"$HOME"}" ;; *) printf '%s' "$1" ;; esac; }
 
+# Whole days from a YYYY-MM-DD date to today (UTC); empty when the date does not parse.
+# GNU date -d first, then BSD date -j -f (macOS).
+epoch_of() { date -u -d "$1" +%s 2>/dev/null || date -u -j -f %Y-%m-%d "$1" +%s 2>/dev/null; }
+days_since() {
+  local d then now
+  case "$1" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*) d="${1:0:10}" ;; *) return 0 ;; esac
+  then="$(epoch_of "$d")"; now="$(epoch_of "$(date -u +%Y-%m-%d)")"
+  [ -n "$then" ] && [ -n "$now" ] && printf '%s' $(( (now - then) / 86400 ))
+}
+
 # ---------------------------------------------------------------- sections
 
 s_index() {
@@ -127,6 +137,10 @@ s_index() {
       for k in Verified Host OS; do
         v="$(head -15 "$HOME/.device/INDEX.md" | sed -n -E "s/^[[:space:]]*-?[[:space:]]*${k}:[[:space:]]*//p" | head -1 | tr -d '\`')"
         kv "index_header_$(printf '%s' "$k" | tr 'A-Z' 'a-z')" "${v:-absent}"
+        if [ "$k" = Verified ]; then
+          local age; age="$(days_since "$v")"
+          [ -n "$age" ] && kv index_age_days "$age"
+        fi
       done
       kv index_lines "$(wc -l <"$HOME/.device/INDEX.md" | tr -d ' ')"
     fi

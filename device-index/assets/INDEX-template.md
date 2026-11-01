@@ -1,7 +1,8 @@
 # Device Index: <hostname or short machine name>
 
 <!-- Fill every <…>. Delete a section only when the user marked it N/A. Delete all comments.
-     Line budget: about 60 lines. Per-line test: if one cheap command answers it, delete the line.
+     Line budget: about 60 lines (up to about 75 with many stacks).
+     Per-line test: if one cheap command answers it, delete the line.
      Facts only; rules go to the agents' instruction files. -->
 
 - Verified: <YYYY-MM-DD>
