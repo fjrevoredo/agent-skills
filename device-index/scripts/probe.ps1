@@ -21,7 +21,7 @@ $ErrorActionPreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'
 $ConfirmPreference = 'None'
 
-$script:ProbeVersion = '1.1.1'
+$script:ProbeVersion = '1.2.0'
 $script:Partial = $false
 $script:AllSections = @('index', 'os', 'packages', 'languages', 'containers', 'shells', 'envgap',
     'secrets', 'synced', 'agents', 'apps', 'repos')

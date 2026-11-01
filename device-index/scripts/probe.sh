@@ -3,7 +3,7 @@
 # Read-only survey of a developer machine for the device-index skill.
 # Runs on macOS /bin/bash 3.2 and Linux bash. No side effects, no secret values.
 
-VERSION="1.1.1"
+VERSION="1.2.0"
 MAX=12          # items shown per list
 PARTIAL=0       # set to 1 when a section times out or fails
 SHELL_TO_PROBE="${SHELL:-}"
@@ -425,6 +425,21 @@ s_envgap() {
   kv vars_missing_in_this_shell "$(printf '%s\n' "$missing" | MAX=40 cap_list)"
   pathgap="$(printf '%s\n' "$out" | sed -n '/^__PROBE_PATH__$/{n;p;}' | tr ':' '\n' | grep -v -x -F -f <(printf '%s\n' "$PATH" | tr ':' '\n') | awk '!seen[$0]++')"
   kv path_entries_missing "$(printf '%s\n' "$pathgap" | cap_list)"
+  # Agent shells are often non-interactive (ssh host cmd, a service, a harness started without the
+  # rc files). Compare against such a shell from a clean env, so the result does not depend on
+  # the shell that started the probe.
+  local base ep clean ionly
+  case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) return ;; esac  # Windows: probe.ps1 covers this
+  base="$(getconf PATH 2>/dev/null)"; base="${base:-/usr/bin:/bin}"
+  if [ -r /etc/environment ]; then
+    ep="$(sed -n -E 's/^PATH="?([^"]*)"?$/\1/p' /etc/environment | head -1)"
+    [ -n "$ep" ] && base="$ep"
+  fi
+  clean="$(run_wd 15 env -i HOME="$HOME" USER="${USER:-}" LOGNAME="${LOGNAME:-}" PATH="$base" "$sh" -c 'echo "$PATH"')"
+  if [ -n "$clean" ]; then
+    ionly="$(printf '%s\n' "$out" | sed -n '/^__PROBE_PATH__$/{n;p;}' | tr ':' '\n' | grep -v -x -F -f <(printf '%s\n' "$clean" | tr ':' '\n') | awk 'NF && !seen[$0]++')"
+    kv path_entries_interactive_only "$(printf '%s\n' "$ionly" | cap_list)"
+  fi
 }
 
 json_keys() {

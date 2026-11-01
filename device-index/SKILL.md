@@ -15,7 +15,7 @@ compatibility: |
   Claude Code, OpenCode, pi. probe.sh needs bash 3.2+ on macOS or Linux (jq optional).
   probe.ps1 needs PowerShell 7+ (pwsh) on Windows; Windows PowerShell 5.1 is not supported.
 metadata:
-  version: "1.1.1"
+  version: "1.2.0"
 ---
 
 # Device index
@@ -216,6 +216,10 @@ to every draft line:
   `.zprofile` (`JAVA_HOME`, `NVM_DIR`, `sdk`, `nvm`) are missing there. On Windows, agent
   PowerShell tools often run with `-NoProfile`, so the pwsh profile does not run. The `envgap`
   probe lists the names; record the activation command for each in `toolchains.md`.
+- **A harness can hide a missing tool.** Claude Code's shell can define `rg` as a function that
+  calls its bundled ripgrep, so `rg` works in Claude Code but not in other agents or scripts. The
+  probe runs in its own process and cannot see such functions. Check `type rg` in each agent shell,
+  and record a tool that only a harness provides.
 - **Windows PATH is read at process start.** A `winget` install changes the registry PATH, but a
   running harness and its shells keep the old PATH until the harness restarts
   ([winget-cli #2815](https://github.com/microsoft/winget-cli/issues/2815)). `envgap` reports
