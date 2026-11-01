@@ -88,8 +88,9 @@ printf '{"instructions":["%s"]}\n' "$dir/probe.md" > "$dir/opencode.json"
 
 On Windows, write the path in the JSON with forward slashes (`cygpath -m` in Git Bash).
 
-Without a working model or API key: `opencode debug config` prints the resolved config (look for
-`instructions`). It proves the config resolves, not that the model sees the file; report it as
+Without a working model or API key: `opencode debug config` shows the `instructions` entries. Its
+output differs per version: v2.2.5 prints the resolved config; v2.0.32 lists each config file
+with its `instructions`. Both are enough for the load check. It proves the config resolves, not that the model sees the file; report it as
 such. v2.2.5 has no debug command that lists skills; to check skills, ask a headless question from
 a temp folder: `opencode run "List only the names of the skills you can load."`
 

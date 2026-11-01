@@ -127,7 +127,11 @@ aliases worth one line.
 Variables set by the user's login + interactive shell but missing in this agent shell, plus missing
 PATH entries. For each name: which tool needs it, what breaks without it, and the activation
 command. Ignore prompt and terminal noise. Missing PATH dirs that hold tools agents call are the
-important ones.
+important ones. `path_entries_missing` compares with the shell that started the probe, so it is
+empty when you start the probe from an interactive terminal. `path_entries_interactive_only`
+compares with a non-interactive shell from a clean env (what `ssh host cmd` and many services get):
+a dir listed there holds tools that such agent shells cannot find (for example `~/.opencode/bin`).
+System dirs that PAM, `/etc/profile` or macOS `path_helper` add can show there too; ignore them.
 
 ### agents
 - Installed agents, versions, global instruction files, skill dirs, MCP server names.
