@@ -1,12 +1,11 @@
 ---
 name: device-index
 description: |
-  Build or refresh a device index: a short, always-loaded file of facts about this machine (paths,
+  Build or refresh a device index: a short, always-loaded file of machine facts (paths,
   toolchains, shells, containers, clusters, services, apps, agents) plus topic files read on demand,
   and wire the coding agents the user picks (Claude Code, OpenCode, pi) to load it. Works on macOS,
-  Linux and Windows. Explores read-only, interviews the user for what only they know, and writes
-  only after approval. With a companion knowledge-store profile, links that store's facts instead
-  of copying them. Use it when the user wants coding agents to know this machine, sets up a new
+  Linux and Windows. Explores read-only, interviews the user, and writes only after approval.
+  Use it when the user wants coding agents to know this machine, sets up a new
   laptop or PC for agents, asks to create, update or check a device index or ~/.device, or when
   agents keep failing on machine facts (wrong JDK, empty JAVA_HOME in agent shells, wrong ssh
   binary, stale PATH). Not for a single repo's AGENTS.md or CLAUDE.md.
@@ -16,7 +15,7 @@ compatibility: |
   Claude Code, OpenCode, pi. probe.sh needs bash 3.2+ on macOS or Linux (jq optional).
   probe.ps1 needs PowerShell 7+ (pwsh) on Windows; Windows PowerShell 5.1 is not supported.
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Device index
@@ -137,8 +136,8 @@ Ask where the source of truth lives:
 Back up any file you replace (`<file>.bak-YYYYMMDD`), then write. When `~/.device` is a link,
 write through it; the target is what changes.
 
-Done when `<probe> --check-index` on each written file reports no `missing:` line except paths the
-text names as absent on purpose, and the user has seen the written paths.
+Done when `<probe> --check-index` on each written file reports no `missing:` line, and the user
+has seen the written paths.
 
 ### 5. Wire
 
@@ -179,8 +178,9 @@ to every draft line:
 - **Per-line test.** "Can the agent get this with one cheap command?" Yes → delete the line, or
   keep only the command. Keep facts the agent cannot infer: traps, activation steps, non-standard
   paths, local helpers, which tool is canonical.
-- **Line budget.** `INDEX.md` at most about 60 lines. Detail goes to a topic file. Topic files are
-  never imported into an instruction file; they stay behind "read when" lines.
+- **Line budget.** `INDEX.md` about 60 lines; up to about 75 on a machine with many stacks.
+  Detail goes to a topic file. Topic files are never imported into an instruction file; they stay
+  behind "read when" lines.
 - **Leave out:** tools pinned by a version manager in each repo, tools that are the latest version
   everywhere, facts already in a repo's own files, session data (PID, uptime, load), counts that
   change often, full package or app lists.
@@ -191,7 +191,8 @@ to every draft line:
 - **Companion links.** With a companion profile: a fact the store owns appears as a link to its
   fact or page ID, never as a copy of the claim.
 - **No secrets, no rules** (see the two ideas above); every backticked path exists
-  (`<probe> --check-index <draft>`; a path the text says is absent on purpose is fine).
+  (`<probe> --check-index <draft>`). Write an example path, or a path that is absent on purpose,
+  as plain text without backticks, so the check stays clean.
 - **User approval of every draft.** The first draft is machine-written; the user's review is the
   quality gate, not a formality.
 
@@ -248,7 +249,11 @@ to every draft line:
   `instructions` entries are combined with AGENTS.md, so wire OpenCode through `instructions`.
 - **Generated instruction files.** When a file says it is generated ("edit X, then rerun the
   bootstrap"), write to the local overlay the generator names, never to the output file.
-- **`--check-index` reports every missing backticked path**, including ones the index names as
-  absent on purpose ("not `~/.sdkman`"). Judge each `missing:` line before calling it stale.
+- **`--check-index` reports every missing backticked path**, and so does a companion store's
+  check. Write a path that is absent on purpose as plain text ("not ~/.sdkman"); then each
+  `missing:` line is a real stale path.
+- **Git Bash eats backslashes.** In Git Bash, an unquoted heredoc or a double-quoted `python -c`
+  string turns `\\` into `\`, so a Windows path in inline Python fails with
+  `SyntaxError: (unicode error)`. Write the script to a file with the file-write tool, then run it.
 - **WSL:** run `probe.sh` inside the Linux side for agents that run there, and `probe.ps1` on the
   Windows side for agents that run there. They are two indexes for two shells.

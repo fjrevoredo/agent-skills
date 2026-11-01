@@ -16,6 +16,8 @@ sections in this order; skip a section the user marks N/A.
 4. Questions the user defers go to an **open items** list, shown again at the end.
 
 Batch small sections together (machine + where things go) and keep large ones alone (toolchains).
+Use the question tool for approvals and short choices; use free-text chat for answers that need
+prose, for example the purpose of each repo group.
 
 Question tools: Claude Code `AskUserQuestion` (1–4 questions, 2–4 options each, the user can
 always type "Other"); OpenCode `question`; pi and others: numbered questions in chat, one line each,

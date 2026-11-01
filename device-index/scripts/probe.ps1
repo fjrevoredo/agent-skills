@@ -21,7 +21,7 @@ $ErrorActionPreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'
 $ConfirmPreference = 'None'
 
-$script:ProbeVersion = '1.1.0'
+$script:ProbeVersion = '1.1.1'
 $script:Partial = $false
 $script:AllSections = @('index', 'os', 'packages', 'languages', 'containers', 'shells', 'envgap',
     'secrets', 'synced', 'agents', 'apps', 'repos')
@@ -248,6 +248,7 @@ function Invoke-SectionIndex {
         (Join-Path $script:HomeDir '.claude\CLAUDE.md'),
         (Join-Path $script:HomeDir '.pi\agent\AGENTS.md'),
         (Join-Path $script:HomeDir '.pi\agent\AGENTS.local.md'),
+        (Join-Path $script:HomeDir '.pi\agent\CLAUDE.md'),
         (Join-Path $script:HomeDir '.config\opencode\AGENTS.md'),
         (Join-Path $script:HomeDir '.codex\AGENTS.md'),
         (Join-Path $script:HomeDir '.gemini\GEMINI.md')
