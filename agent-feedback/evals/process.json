@@ -43,7 +43,10 @@
           "20261111-140000-bbbb"
         ],
         "no_briefs": true,
-        "repo_unchanged": true
+        "repo_unchanged": true,
+        "not_in_row": [
+          "20261112-090000-cccc"
+        ]
       }
     },
     {

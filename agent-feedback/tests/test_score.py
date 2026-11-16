@@ -78,11 +78,20 @@ class ScoreProcessTest(unittest.TestCase):
         self.assertFalse(r["passed"])
         self.assertIn(self.A, r["reasons"][0])
 
-    def test_same_row_needs_both_ids_on_one_line_by_suffix(self):
-        expect = {"same_row": [self.A, self.B]}
+    def test_same_row_needs_both_ids_on_one_table_row_by_suffix(self):
+        expect = {"same_row": [self.A, self.B], "not_in_row": [self.C]}
         snap = self.snap({})
         self.assertTrue(self.score(expect, snap, final="| README path | aaaa, bbbb | 2 |")["passed"])
         self.assertFalse(self.score(expect, snap, final="| x | aaaa |\n| y | bbbb |")["passed"])
+        self.assertFalse(self.score(expect, snap, final="I did not group aaaa with bbbb.")["passed"])
+        self.assertFalse(self.score(expect, snap, final="| all | aaaa, bbbb, cccc | 3 |")["passed"])
+
+    def test_an_entry_in_two_states_fails(self):
+        snap = self.snap({self.A: "proposed"})
+        snap["duplicates"] = [self.A]
+        r = self.score({}, snap)
+        self.assertFalse(r["passed"])
+        self.assertIn("more than one state", r["reasons"][0])
 
     def test_same_link_must_be_one_existing_brief(self):
         expect = {"same_link": [self.A, self.B]}

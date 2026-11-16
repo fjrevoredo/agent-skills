@@ -34,3 +34,5 @@ Haiku, Claude Code 2.1.325. Seeded state dir: two duplicate entries (README name
 - Without approval Haiku stops at the table and asks for a decision per row; with approval it writes
   one brief, links both duplicates to it, and closes the fixed entry as done after reading the Makefile.
 - Cost: about $0.01 per run.
+- After the review fixes (stricter scoring: duplicates alone on one table row, no entry in two state
+  dirs; privacy rule moved into steps 3–4; Gotchas): 2/2 and 2/2.

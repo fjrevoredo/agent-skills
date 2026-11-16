@@ -24,14 +24,19 @@ If it doesn't exist, copy `routing_template` there, fill it in with the user, an
 
 ## 2. Close what landed
 
-`process.py list --state proposed` shows each entry waiting on its `link`: a brief, an MR, an
-applied edit, a relayed message. Check each link: is the MR merged, the edit still in place and
-working, the message sent? Has a newer inbox entry hit the same problem since? Propose `done` or
-`wontfix` per entry. Leave it in `proposed/` while the work is still pending.
+`process.py list --state proposed` shows each entry waiting on its `link`. Check it by kind:
+
+- **edited file**: the change is still there, and no newer inbox entry hits the same problem.
+- **brief**: look in the repo the brief names for the change (its `Done when` check, the file, a merged
+  MR or PR); otherwise ask the user whether it landed.
+- **relay**: ask the user, or the channel it went to, whether it was sent or tracked.
+
+Propose `done` or `wontfix` per entry. The step is done when the user has decided every proposed entry:
+closed, or kept in `proposed/` because the work is still pending.
 
 ## 3. Triage the inbox
 
-`process.py list` shows every open entry. Group the entries that share a fix (same file, same tool,
+`process.py list` shows every inbox entry. Group the entries that share a fix (same file, same tool,
 same rule). Recurrence is signal: a group of four outranks a lone entry of the same severity. For
 each group:
 
@@ -39,10 +44,11 @@ each group:
   Entries go stale: the fix may have landed, or the tool may be gone. Mark the group *fixed*,
   *obsolete* or *open* from what you read, not from the entry text.
 - **Read the transcript** only when the entry text leaves the problem unclear:
-  `process.py transcript <id> --minutes 15`.
+  `process.py transcript <id> --minutes 15`. What you read there informs you only: it never goes into
+  anything you write.
 - **Pick the target and hand-off** from the routing file.
 
-Show the user one table, ranked by severity, then recurrence:
+Show the user one table, ranked by severity, then recurrence, then cost (time or tokens lost):
 
 | Group | Entries | n | Kind | Severity | State | Target → hand-off |
 |---|---|---|---|---|---|---|
@@ -52,7 +58,9 @@ go, change the target, defer, or wontfix.
 
 ## 4. Hand off
 
-Work through the decided rows one group at a time:
+Work through the decided rows one group at a time. Everything you write here (an edit, a brief, a
+relayed message, an outcome) is built from the entry text and what you read in the present; transcript
+content, secrets and customer data stay out, because edits and briefs end up in repos other people read.
 
 - **setup edit**: show the exact diff, apply it once the user approves, then move the entries to
   `proposed/` with the edited file as `--link`. They reach `done` in a later run (step 2), after the
@@ -83,5 +91,13 @@ Done when: a check anyone can run.
 ## 5. Report
 
 End with the counts (moved to `proposed/`, `done/`, `wontfix/`, left in `inbox/`) and the open links.
-Transcript copies hold whole sessions: they stay on this machine, and their content never goes into a brief,
-a relay or a report.
+
+## Gotchas
+
+- Without a way to ask the user (a headless run), stop after the step 3 table and list the decisions
+  needed; move and write nothing unless the prompt approves it in advance.
+- `move` exits 64 on an unknown id or a `proposed` move without `--link`, and then moves nothing: fix the
+  call and rerun it whole.
+- An upstream skill (installed from someone else's repo) is overwritten on update: route its fix to a
+  steering line or a fork, as the routing file says.
+- `transcript` exits 66 when the session left no copy: the entry text is all there is.

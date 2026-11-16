@@ -156,6 +156,43 @@ class ProcessTest(unittest.TestCase):
         self.assertEqual(p["routing"], str(routing))
         self.assertTrue(p["routing_exists"])
 
+    def test_move_rejects_ids_that_are_not_entry_ids(self):
+        outside = self.tmp / "outside"
+        outside.mkdir()
+        (outside / "victim.md").write_text("keep me")
+        self.add("20261110-100000-aaaa")
+        r = self.run_script("move", "20261110-100000-aaaa", "../../outside/victim", "--to", "wontfix",
+                            "--outcome", "x")
+        self.assertEqual(r.returncode, 64)
+        self.assertEqual((outside / "victim.md").read_text(), "keep me")
+        self.assertTrue((self.state / "inbox" / "20261110-100000-aaaa.md").exists())
+
+    def test_move_within_the_same_state_updates_in_place(self):
+        self.add("20261110-100000-aaaa", state="proposed", link="briefs/x.md")
+        r = self.run_script("move", "20261110-100000-aaaa", "--to", "proposed", "--outcome", "Still waiting",
+                            "--link", "briefs/x.md")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.meta(self.state / "proposed" / "20261110-100000-aaaa.md")["outcome"], "Still waiting")
+        self.assertIn("Some text.", (self.state / "proposed" / "20261110-100000-aaaa.md").read_text())
+
+    def test_move_of_an_entry_without_session_works(self):
+        self.add("20261110-100000-aaaa", session="")
+        r = self.run_script("move", "20261110-100000-aaaa", "--to", "done", "--outcome", "x")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["transcripts_deleted"], [])
+
+    def test_move_round_trips_a_real_capture_entry(self):
+        capture = PLUGIN / "skills" / "capture" / "scripts" / "capture.py"
+        text = 'Quotes "x" and \'y\', unicode é, and a line:\n---\nafter it.'
+        r = subprocess.run([sys.executable, str(capture), "add", "--kind", "docs", "--suggestion", 'Use "z"'],
+                           input=text, capture_output=True, text=True, env=self.env, cwd=self.tmp)
+        entry_id = json.loads(r.stdout)["id"]
+        r = self.run_script("move", entry_id, "--to", "proposed", "--outcome", "Brief", "--link", "b.md")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        moved = (self.state / "proposed" / f"{entry_id}.md").read_text()
+        self.assertIn(text, moved)
+        self.assertEqual(self.meta(self.state / "proposed" / f"{entry_id}.md")["suggestion"], 'Use "z"')
+
     # transcript
 
     def write_transcript(self, session, lines):
@@ -197,6 +234,20 @@ class ProcessTest(unittest.TestCase):
         self.add("20261110-100000-aaaa", session=SID_A)
         r = self.run_script("transcript", "20261110-100000-aaaa")
         self.assertLess(len(r.stdout), 1000)
+
+    def test_transcript_skips_records_without_timezone(self):
+        self.write_transcript(SID_A, [
+            {"type": "user", "timestamp": "2026-11-10T08:59:00", "message": {"content": "naive"}},
+            {"type": "user", "timestamp": "2026-11-10T08:59:30Z", "message": {"content": "aware"}}])
+        self.add("20261110-100000-aaaa", session=SID_A)
+        r = self.run_script("transcript", "20261110-100000-aaaa")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("aware", r.stdout)
+        self.assertNotIn("naive", r.stdout)
+
+    def test_transcript_rejects_negative_minutes(self):
+        self.add("20261110-100000-aaaa", session=SID_A)
+        self.assertEqual(self.run_script("transcript", "20261110-100000-aaaa", "--minutes", "-5").returncode, 64)
 
     def test_transcript_missing_copy_says_so(self):
         self.add("20261110-100000-aaaa", session=SID_A)

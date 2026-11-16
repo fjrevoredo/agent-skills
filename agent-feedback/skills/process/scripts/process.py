@@ -13,13 +13,17 @@
       State dir, briefs dir, routing file ($AGENT_FEEDBACK_ROUTING, else <state>/routing.md), template.
 
 State dir: $AGENT_FEEDBACK_DIR, else ${XDG_STATE_HOME:-~/.local/state}/agent-feedback.
-Exit codes: 0 ok, 64 usage error or unknown id (nothing moved), 66 no transcript copy.
+Exit codes: 0 ok, 64 usage error or unknown id (nothing moved), 66 no transcript copy,
+73 an entry can't be read (nothing moved).
 """
 
 import argparse
 import importlib.util
 import json
+import os
+import re
 import sys
+import tempfile
 from pathlib import Path
 
 _spec = importlib.util.spec_from_file_location(
@@ -28,6 +32,7 @@ capture = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(capture)
 
 ENTRY_STATES = ("inbox", "proposed", "done", "wontfix")
+ID_RE = re.compile(r"^\d{8}-\d{6}-[0-9a-f]{4}$")
 TEMPLATE = Path(__file__).resolve().parents[1] / "routing.template.md"
 
 
@@ -68,6 +73,8 @@ def cmd_list(args):
 
 
 def find_entry(root, entry_id):
+    if not ID_RE.match(entry_id):
+        return None
     for state in ENTRY_STATES:
         path = root / state / f"{entry_id}.md"
         if path.is_file():
@@ -92,15 +99,23 @@ def cmd_move(args):
         print(f"agent-feedback: no entry {', '.join(missing)}; nothing moved", file=sys.stderr)
         return 64
 
+    try:  # read every entry before touching any, so a bad one moves nothing
+        loaded = {i: (p, *read_entry(p)) for i, p in paths.items()}
+    except OSError as e:
+        print(f"agent-feedback: cannot read an entry: {e}; nothing moved", file=sys.stderr)
+        return 73
+
     now = capture.datetime.datetime.now().astimezone().isoformat(timespec="seconds")
     sessions = set()
-    for entry_id, path in paths.items():
-        fields, text = read_entry(path)
+    for path, fields, text in loaded.values():
         fields.update(outcome=args.outcome, moved=now)
         if args.link:
             fields["link"] = args.link
         dest = root / args.to / path.name
-        dest.write_text(f"---\n{capture.header(fields)}\n---\n\n{text}\n", encoding="utf-8")
+        fd, tmp = tempfile.mkstemp(dir=dest.parent, prefix=f".{path.stem}.", suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(f"---\n{capture.header(fields)}\n---\n\n{text}\n")
+        os.replace(tmp, dest)
         if dest != path:
             path.unlink()
         if fields.get("session"):
@@ -151,6 +166,9 @@ def transcript_lines(record):
 
 
 def cmd_transcript(args):
+    if args.minutes < 0:
+        print("agent-feedback: --minutes must be 0 or more", file=sys.stderr)
+        return 64
     root = capture.state_dir()
     path = find_entry(root, args.id)
     if path is None:
@@ -171,7 +189,7 @@ def cmd_transcript(args):
                 when = parse_time(record["timestamp"])
             except (ValueError, KeyError, TypeError, AttributeError):
                 continue
-            if start <= when <= end:
+            if when.tzinfo is not None and start <= when <= end:
                 for text in transcript_lines(record):
                     print(f"{when.astimezone():%H:%M} {text}")
     return 0

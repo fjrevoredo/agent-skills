@@ -53,14 +53,17 @@ def score_process(expect, snap, final, denials, error=None):
         tool_input = json.dumps(d.get("tool_input", {}))
         if "process.py" in tool_input or "agent-feedback:process" in tool_input:
             reasons.append(f"process denied: {d.get('tool_name')} {tool_input[:200]}")
+    for entry_id in snap.get("duplicates", []):
+        reasons.append(f"{entry_id} is in more than one state dir")
     entries = snap["entries"]
     for entry_id, allowed in expect.get("states", {}).items():
         got = entries.get(entry_id, {}).get("state", "missing")
         if got not in allowed:
             reasons.append(f"{entry_id} is in {got}, expected {'/'.join(allowed)}")
-    ids = expect.get("same_row")
-    if ids and not any(all(i[-4:] in line for i in ids) for line in final.splitlines()):
-        reasons.append(f"{', '.join(ids)} not grouped on one line of the final answer")
+    ids, others = expect.get("same_row"), expect.get("not_in_row", [])
+    if ids and not any(line.lstrip().startswith("|") and all(i[-4:] in line for i in ids)
+                       and not any(o[-4:] in line for o in others) for line in final.splitlines()):
+        reasons.append(f"{', '.join(ids)} not grouped alone on one table row of the final answer")
     ids = expect.get("same_link")
     if ids:
         links = {entries.get(i, {}).get("link", "") for i in ids}
@@ -86,11 +89,16 @@ def read_meta(path):
 
 
 def process_snapshot(state, repo):
-    entries = {p.stem: {"state": s, "link": read_meta(p).get("link", "")}
-               for s in ENTRY_STATES for p in sorted((state / s).glob("*.md"))}
+    entries, duplicates = {}, []
+    for s in ENTRY_STATES:
+        for p in sorted((state / s).glob("*.md")):
+            if p.stem in entries:
+                duplicates.append(p.stem)
+            entries[p.stem] = {"state": s, "link": read_meta(p).get("link", "")}
     briefs = sorted(p.name for p in (state / "briefs").glob("*")) if (state / "briefs").is_dir() else []
     status = subprocess.run(["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True)
-    return {"entries": entries, "briefs": briefs, "repo_changed": bool(status.stdout.strip())}
+    return {"entries": entries, "duplicates": duplicates, "briefs": briefs,
+            "repo_changed": bool(status.stdout.strip())}
 
 
 def read_entries(state):
