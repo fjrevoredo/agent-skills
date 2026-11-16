@@ -255,6 +255,28 @@ class ProcessTest(unittest.TestCase):
         self.assertEqual(r.returncode, 66)
         self.assertIn("no transcript copy", r.stderr)
 
+    def test_transcript_of_an_entry_without_a_valid_time_says_so(self):
+        self.write_transcript(SID_A, [{"type": "user", "timestamp": "2026-11-10T08:59:00Z",
+                                       "message": {"content": "hi"}}])
+        for bad in ("", "yesterday"):
+            self.add("20261110-100000-aaaa", session=SID_A, time=bad)
+            r = self.run_script("transcript", "20261110-100000-aaaa")
+            self.assertEqual(r.returncode, 65, r.stderr)
+            self.assertIn("no valid time", r.stderr)
+            self.assertNotIn("Traceback", r.stderr)
+
+    def test_move_with_an_unreadable_entry_moves_nothing(self):
+        self.add("20261110-100000-aaaa")
+        self.add("20261110-100000-bbbb")
+        bad = self.state / "inbox" / "20261110-100000-bbbb.md"
+        bad.chmod(0)
+        self.addCleanup(bad.chmod, 0o644)
+        r = self.run_script("move", "20261110-100000-aaaa", "20261110-100000-bbbb", "--to", "done",
+                            "--outcome", "x")
+        self.assertEqual(r.returncode, 73, r.stderr)
+        self.assertTrue((self.state / "inbox" / "20261110-100000-aaaa.md").exists())
+        self.assertEqual(list((self.state / "done").iterdir()), [])
+
 
 if __name__ == "__main__":
     unittest.main()

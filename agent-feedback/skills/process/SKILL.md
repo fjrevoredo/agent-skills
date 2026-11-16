@@ -109,4 +109,5 @@ End with the counts (moved to `proposed/`, `done/`, `wontfix/`, left in `inbox/`
   call and rerun it whole.
 - An upstream skill (installed from someone else's repo) is overwritten on update: route its fix to a
   steering line or a fork, as the routing file says.
-- `transcript` exits 66 when the session left no copy: the entry text is all there is.
+- `transcript` exits 66 when the session left no copy, or 65 when the entry has no valid time: the
+  entry text is all there is.

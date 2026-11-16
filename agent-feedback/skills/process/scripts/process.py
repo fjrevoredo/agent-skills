@@ -13,8 +13,8 @@
       State dir, briefs dir, routing file ($AGENT_FEEDBACK_ROUTING, else <state>/routing.md), template.
 
 State dir: $AGENT_FEEDBACK_DIR, else ${XDG_STATE_HOME:-~/.local/state}/agent-feedback.
-Exit codes: 0 ok, 64 usage error or unknown id (nothing moved), 66 no transcript copy,
-73 an entry can't be read (nothing moved).
+Exit codes: 0 ok, 64 usage error or unknown id (nothing moved), 65 entry has no valid time,
+66 no transcript copy, 73 an entry can't be read (nothing moved).
 """
 
 import argparse
@@ -180,7 +180,15 @@ def cmd_transcript(args):
         print(f"agent-feedback: no transcript copy for {args.id}; the entry text is all there is",
               file=sys.stderr)
         return 66
-    end = parse_time(fields["time"]) + capture.datetime.timedelta(minutes=1)
+    try:
+        entry_time = parse_time(fields.get("time") or "")
+        if entry_time.tzinfo is None:
+            raise ValueError
+    except (ValueError, TypeError, AttributeError):
+        print(f"agent-feedback: entry {args.id} has no valid time; the entry text is all there is",
+              file=sys.stderr)
+        return 65
+    end = entry_time + capture.datetime.timedelta(minutes=1)
     start = end - capture.datetime.timedelta(minutes=args.minutes + 1)
     with capture.gzip.open(copy, "rt", encoding="utf-8", errors="replace") as f:
         for line in f:
