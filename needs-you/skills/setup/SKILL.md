@@ -9,7 +9,7 @@ description: |
 allowed-tools: Bash(${CLAUDE_SKILL_DIR}/scripts/setup.sh *)
 compatibility: macOS with Homebrew; Hammerspoon is installed by the script when the user agrees.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Set up the needs-you popup
@@ -57,4 +57,4 @@ If `missing` still lists items, fix them by the Gotchas below and run `--check` 
 - After a plugin update, the SessionStart hook says when the copied Spoon is outdated; `--install` again
   replaces it. Never symlink the Spoon into the plugin folder: that path changes with every update.
 - No popup during a live test is often expected: Claude Code sends `permission_prompt` only after about six
-  seconds, and with herdr a popup is skipped while the user looks at that pane.
+  seconds, and with herdr-app a popup is skipped while the user looks at that terminal.

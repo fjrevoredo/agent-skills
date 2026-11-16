@@ -15,8 +15,8 @@
 #
 # State: ${TMPDIR:-/tmp}/needs-you/<session_id> exists while a popup is open; it holds the agent_id.
 # The popup is driven through hammerspoon://needs-you and hammerspoon://needs-you-clear (open -g keeps
-# the focus where it is). herdr is optional: with it, the popup gets the pane title, skips a pane the
-# user is looking at, and a click focuses the pane. macOS only; elsewhere it exits silently.
+# the focus where it is). herdr-app / herdr-core (hc) is optional: with it ($HC_TERMINAL_ID set), the popup
+# gets the terminal title, skips a terminal the user is looking at, and a click focuses that terminal. macOS only; elsewhere it exits silently.
 
 set -uo pipefail
 
@@ -69,19 +69,20 @@ show() {
   mkdir -p "$state_dir"
   printf '%s' "$agent" >"$state_file"
 
-  local pane="${HERDR_PANE_ID:-}" title="" focused=0 info
+  local pane="${HC_TERMINAL_ID:-}" title="" focused=0 terminal="${__CFBundleIdentifier:-}" info
   if [[ -n "$pane" ]]; then
-    info="$("${HERDR_BIN_PATH:-herdr}" pane get "$pane" 2>/dev/null)" || info=""
-    if [[ -n "$info" ]]; then
-      eval "$("$jq" -r '.result.pane as $p | @sh "title=\($p.terminal_title_stripped // "") focused=\(if $p.focused then 1 else 0 end)"' <<<"$info" 2>/dev/null)" || true
-    fi
+    terminal="dev.herdr.app"
+    info="$("${HC_BIN_PATH:-hc}" get "$pane" --json 2>/dev/null)" || info=""
+    [[ -n "$info" ]] && title="$("$jq" -r '.title // ""' <<<"$info" 2>/dev/null)" || true
+    info="$("${HERDR_APP_BIN_PATH:-herdr-app}" status 2>/dev/null)" || info=""
+    [[ -n "$info" && "$("$jq" -r '.agent // ""' <<<"$info" 2>/dev/null)" == "$pane" ]] && focused=1
   fi
   [[ -n "$title" ]] || title="$(basename "${cwd:-Claude}")"
 
   local url
   url="$("$jq" -rn \
     --arg session "$session" --arg kind "$kind" --arg reason "$reason" --arg title "$title" \
-    --arg pane "$pane" --arg terminal "${__CFBundleIdentifier:-}" --arg focused "$focused" \
+    --arg pane "$pane" --arg terminal "$terminal" --arg focused "$focused" \
     '"hammerspoon://needs-you?session=\($session|@uri)&kind=\($kind|@uri)&reason=\($reason|@uri)&title=\($title|@uri)&pane=\($pane|@uri)&terminal=\($terminal|@uri)&focused=\($focused|@uri)"')"
   open -g "$url" >/dev/null 2>&1 || true
 }

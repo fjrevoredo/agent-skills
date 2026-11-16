@@ -9,8 +9,8 @@
 ---
 --- One popup per session, stacked at the top centre of the main screen (top-right is where macOS banners
 --- land). It floats above other windows, never takes keyboard focus and is not a notification, so Focus
---- modes don't hide it. Click: close it, focus the herdr pane (when there is one) and bring the terminal to
---- the front. Option-click: close only. A popup is skipped when the hook reports the herdr pane as focused
+--- modes don't hide it. Click: close it, focus the herdr-app terminal (when there is one) and bring the terminal to
+--- the front. Option-click: close only. A popup is skipped when the hook reports the herdr-app terminal as focused
 --- and that terminal is the frontmost app.
 ---
 --- Usage in ~/.hammerspoon/init.lua:  hs.loadSpoon("NeedsYou"):start()
@@ -19,7 +19,7 @@ local obj = {}
 obj.__index = obj
 
 obj.name = "NeedsYou"
-obj.version = "1.0.0"
+obj.version = "1.1.0"
 obj.author = "Francisco J. Revoredo"
 obj.homepage = "https://github.com/fjrevoredo/agent-skills/tree/main/needs-you"
 obj.license = "MIT - https://opensource.org/licenses/MIT"
@@ -39,16 +39,16 @@ obj.colors = {
   reason = { hex = "#bac2de" },
 }
 
---- NeedsYou.herdrPath
+--- NeedsYou.herdrAppPath
 --- Variable
---- Path of the herdr binary, used to focus the pane on click. Default: the first existing of
---- ~/.local/bin/herdr and /opt/homebrew/bin/herdr; without one, a click only brings the terminal forward.
-obj.herdrPath = nil
+--- Path of the herdr-app binary, used to focus the terminal on click. Default: the first existing of
+--- ~/.local/bin/herdr-app and /opt/homebrew/bin/herdr-app; without one, a click only brings the app forward.
+obj.herdrAppPath = nil
 
 --- NeedsYou.defaultTerminal
 --- Variable
 --- Bundle id of the app a click brings forward when the hook didn't report the terminal.
-obj.defaultTerminal = "com.github.wez.wezterm"
+obj.defaultTerminal = "dev.herdr.app"
 
 --- NeedsYou.popups
 --- Variable
@@ -78,8 +78,8 @@ local function fileExists(path)
 end
 
 function obj:_herdr()
-  if fileExists(self.herdrPath) then return self.herdrPath end
-  for _, path in ipairs({ os.getenv("HOME") .. "/.local/bin/herdr", "/opt/homebrew/bin/herdr" }) do
+  if fileExists(self.herdrAppPath) then return self.herdrAppPath end
+  for _, path in ipairs({ os.getenv("HOME") .. "/.local/bin/herdr-app", "/opt/homebrew/bin/herdr-app" }) do
     if fileExists(path) then return path end
   end
   return nil
@@ -118,8 +118,8 @@ function obj:_focus(popup)
   end
   local herdr = validPane(popup.pane) and self:_herdr() or nil
   if herdr then
-    -- No shell: the pane id is one argument, validated above.
-    hs.task.new(herdr, function() bringTerminal() end, { "agent", "focus", popup.pane }):start()
+    -- No shell: the terminal id is one argument, validated above.
+    hs.task.new(herdr, function() bringTerminal() end, { "do", "agent.focus", "--terminal", popup.pane }):start()
   else
     bringTerminal()
   end

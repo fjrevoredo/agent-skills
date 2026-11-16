@@ -1,6 +1,6 @@
 {
   "name": "needs-you",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A macOS popup (Hammerspoon) while a Claude Code session waits for you: a tool approval, AskUserQuestion, an MCP prompt, or a plain-text approval gate. Closes itself once you answer.",
   "author": { "name": "Francisco J. Revoredo" },
   "license": "MIT"

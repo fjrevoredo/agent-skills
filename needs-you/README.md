@@ -6,8 +6,8 @@ it closes itself once you answer. "Done" stays whatever your terminal already do
 
 The popup is a [Hammerspoon](https://www.hammerspoon.org) Spoon: it floats above all windows, never takes
 the keyboard focus and is not a notification, so Focus modes don't hide it. Click it to jump to the session;
-Option-click to dismiss. [herdr](https://herdr.dev) is optional: with it, the popup shows the pane title,
-is skipped while you look at that pane, and a click focuses the pane.
+Option-click to dismiss. herdr-app / herdr-core (`hc`) is optional: inside an `hc` terminal the popup shows the
+terminal title, is skipped while you look at that terminal, and a click focuses it.
 
 ## Install
 
@@ -30,9 +30,9 @@ Uninstall with `claude plugin uninstall needs-you@fjrevoredo-agent-skills`, then
 |---|---|
 | `hooks/hooks.json` | Wires every event below to the one hook script |
 | `scripts/needs-you.sh` | The hook: decides when to show and when to clear (bash + jq; macOS ships `/usr/bin/jq` from version 15) |
-| `NeedsYou.spoon/` | The popup (Hammerspoon Lua). Config: `width`, `colors`, `herdrPath`, `defaultTerminal` |
+| `NeedsYou.spoon/` | The popup (Hammerspoon Lua). Config: `width`, `colors`, `herdrAppPath`, `defaultTerminal` (default `dev.herdr.app`) |
 | `skills/setup` | `/needs-you:setup` and its `setup.sh --check / --install` |
-| `tests/` | Hook tests with fake `open`, `herdr`, `uname` and `jq` |
+| `tests/` | Hook tests with fake `open`, `hc`, `herdr-app`, `uname` and `jq` |
 
 ## When it shows and when it closes
 
@@ -68,10 +68,11 @@ prefer `AskUserQuestion`; when the question has to stay in plain text, end the r
 - One popup per session. While a background subagent waits, the main agent's `Stop`, your next prompt or a
   new wait in the same session replaces or closes its popup. A subagent's prompt that arrives without an
   `agent_id` isn't closed by that subagent's tool events either; the main agent's `Stop` or your next prompt is.
-- The click runs `herdr agent focus` with Hammerspoon's environment, so it reaches herdr only on its default
-  socket.
+- The click runs `herdr-app do agent.focus --terminal <t>` with Hammerspoon's environment.
+- "Looking at it" means herdr-app's focused agent (`herdr-app status` → `agent`) is this terminal, even when
+  the herdr-app window itself is in the background.
 - A click brings the terminal app to the front by its bundle id (`$__CFBundleIdentifier`, set by macOS in
-  each terminal); without herdr it can't pick the right tab.
+  each terminal); without herdr-app it can't pick the right tab.
 
 ## Development
 

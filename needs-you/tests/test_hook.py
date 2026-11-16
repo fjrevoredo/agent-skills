@@ -1,6 +1,6 @@
 """Tests for scripts/needs-you.sh. Run: python3 -m unittest discover needs-you/tests
 
-Fake open, herdr, uname and jq on PATH log their arguments; jq passes through to the real /usr/bin/jq.
+Fake open, hc, herdr-app, uname and jq on PATH log their arguments; jq passes through to the real /usr/bin/jq.
 """
 
 import json
@@ -32,7 +32,8 @@ class HookTest(unittest.TestCase):
         self.fake("open", 'echo "open $*" >> "$LOG"')
         self.fake("uname", 'echo "${FAKE_UNAME:-Darwin}"')
         self.fake("jq", f'echo "jq" >> "$LOG"; exec {REAL_JQ} "$@"')
-        self.fake("herdr", 'echo "herdr $*" >> "$LOG"; printf "%s" "${FAKE_HERDR_OUT:-}"')
+        self.fake("hc", 'echo "hc $*" >> "$LOG"; printf "%s" "${FAKE_HC_OUT:-}"')
+        self.fake("herdr-app", 'echo "herdr-app $*" >> "$LOG"; printf "%s" "${FAKE_APP_OUT:-}"')
         self.env = {
             "PATH": f"{self.bin}:/usr/bin:/bin",
             "HOME": str(self.home),
@@ -102,19 +103,28 @@ class HookTest(unittest.TestCase):
         self.assertEqual(self.opens(), [])
 
     def test_herdr_title_and_focus(self):
-        out = json.dumps({"result": {"pane": {"terminal_title_stripped": "Kesh: check-in", "focused": True}}})
         self.run_hook("Notification", notification_type="permission_prompt", message="m",
-                      env={"HERDR_PANE_ID": "w2G:p1", "FAKE_HERDR_OUT": out})
+                      env={"HC_TERMINAL_ID": "t2", "FAKE_HC_OUT": json.dumps({"title": "Kesh: check-in"}),
+                           "FAKE_APP_OUT": json.dumps({"agent": "t2"})})
         [p] = self.shown()
         self.assertEqual(p["title"], "Kesh: check-in")
         self.assertEqual(p["focused"], "1")
-        self.assertEqual(p["pane"], "w2G:p1")
-        self.assertIn("herdr pane get w2G:p1", self.calls())
+        self.assertEqual(p["pane"], "t2")
+        self.assertEqual(p["terminal"], "dev.herdr.app")
+        self.assertIn("hc get t2 --json", self.calls())
+        self.assertIn("herdr-app status", self.calls())
+
+    def test_herdr_other_terminal_focused(self):
+        self.run_hook("Notification", notification_type="permission_prompt", message="m",
+                      env={"HC_TERMINAL_ID": "t2", "FAKE_APP_OUT": json.dumps({"agent": "t4"})})
+        [p] = self.shown()
+        self.assertEqual(p["focused"], "0")
 
     def test_herdr_missing_falls_back_to_folder(self):
-        (self.bin / "herdr").unlink()
+        (self.bin / "hc").unlink()
+        (self.bin / "herdr-app").unlink()
         r = self.run_hook("Notification", notification_type="permission_prompt", message="m",
-                          env={"HERDR_PANE_ID": "w2G:p1"})
+                          env={"HC_TERMINAL_ID": "t2"})
         self.assertEqual(r.returncode, 0, r.stderr)
         [p] = self.shown()
         self.assertEqual(p["title"], "my-repo")
@@ -137,9 +147,8 @@ class HookTest(unittest.TestCase):
 
     def test_shell_metacharacters_are_not_executed(self):
         evil = "it's $(touch PWNED) `touch PWNED2` \"q\" ; touch PWNED3"
-        out = json.dumps({"result": {"pane": {"terminal_title_stripped": evil, "focused": False}}})
         self.run_hook("Notification", notification_type="permission_prompt", message=evil,
-                      env={"HERDR_PANE_ID": "w2G:p1", "FAKE_HERDR_OUT": out})
+                      env={"HC_TERMINAL_ID": "t2", "FAKE_HC_OUT": json.dumps({"title": evil})})
         self.run_hook("Stop", last_assistant_message=f"[needs-you: {evil}]")
         self.assertEqual(list(self.tmp.rglob("PWNED*")), [])
         self.assertFalse(any(Path.cwd().glob("PWNED*")))
