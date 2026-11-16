@@ -86,6 +86,17 @@ class ScoreProcessTest(unittest.TestCase):
         self.assertFalse(self.score(expect, snap, final="I did not group aaaa with bbbb.")["passed"])
         self.assertFalse(self.score(expect, snap, final="| all | aaaa, bbbb, cccc | 3 |")["passed"])
 
+    def test_same_row_accepts_a_card_entries_line(self):
+        expect = {"same_row": [self.A, self.B], "not_in_row": [self.C]}
+        snap = self.snap({})
+        self.assertTrue(self.score(expect, snap, final="  Entries: x-aaaa (one), x-bbbb (two)")["passed"])
+        self.assertTrue(self.score(expect, snap, final="- **Ids:** aaaa, bbbb")["passed"])
+        self.assertTrue(self.score(expect, snap, final="**Group A: README** (aaaa, bbbb)")["passed"])
+        self.assertTrue(self.score(expect, snap, final="### README (medium, 2: aaaa, bbbb)")["passed"])
+        self.assertFalse(self.score(expect, snap, final="Entries: aaaa, bbbb, cccc")["passed"])
+        self.assertFalse(self.score(expect, snap, final="Entries: aaaa\nEntries: bbbb")["passed"])
+        self.assertFalse(self.score(expect, snap, final="These entries: aaaa and bbbb differ.")["passed"])
+
     def test_an_entry_in_two_states_fails(self):
         snap = self.snap({self.A: "proposed"})
         snap["duplicates"] = [self.A]

@@ -36,3 +36,8 @@ Haiku, Claude Code 2.1.325. Seeded state dir: two duplicate entries (README name
 - Cost: about $0.01 per run.
 - After the review fixes (stricter scoring: duplicates alone on one table row, no entry in two state
   dirs; privacy rule moved into steps 3–4; Gotchas): 2/2 and 2/2.
+- Cards instead of a table (step 3 presents each group as Today / Why it fails / Change / Why this
+  way, opened by a head line with severity, n and ids): the table-row check failed 1/2, so the
+  scorer now also accepts a heading or an `Entries:`/`Ids:` line. Before the head-line rule in
+  SKILL.md, Haiku sometimes put the ids only in prose; after it, triage 12/13, approved 3/3. Failed
+  runs now keep the whole final answer in `--json` output.

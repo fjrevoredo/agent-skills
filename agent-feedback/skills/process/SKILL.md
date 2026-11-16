@@ -48,10 +48,19 @@ each group:
   anything you write.
 - **Pick the target and hand-off** from the routing file.
 
-Show the user one table, ranked by severity, then recurrence, then cost (time or tokens lost):
+Present the groups ranked by severity, then recurrence, then cost (time or tokens lost). Each group is
+one card the user can judge at a glance:
 
-| Group | Entries | n | Kind | Severity | State | Target → hand-off |
-|---|---|---|---|---|---|---|
+- **Today**: how it works now (the rule, step or tool behaviour, as read in the present).
+- **Why it fails**: what went wrong in the entries, and what it cost.
+- **Change**: the proposed fix in one sentence, with its target and hand-off.
+- **Why this way**: why this target and hand-off over the obvious alternative.
+
+Open each card with one head line: a short title, severity, the number of entries and their ids. Keep
+the exact entry text folded or on request.
+With more than a few groups, put the cards on one page (an HTML artifact, if the session can publish
+one) with a decision per card, rather than a long message. Closed groups (*fixed*, *obsolete*) need one
+line each, not a card.
 
 The step is done when every inbox entry is in exactly one row, and the user has decided each row:
 go, change the target, defer, or wontfix.

@@ -16,6 +16,7 @@ Exit codes: 0 all passed, 1 some failed, 64 usage.
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -46,6 +47,11 @@ def score(expect, entries, denials, error=None):
     return {"passed": not reasons, "reasons": reasons}
 
 
+# A group in the final answer: a table row, a card's heading line (# or bold lead), or its
+# "Entries:" / "Ids:" line.
+GROUP_LINE = re.compile(r"\s*(\||#|\*\*|[-*]?\s*\**(entries|ids)\**\s*:)", re.IGNORECASE)
+
+
 def score_process(expect, snap, final, denials, error=None):
     """Return {"passed", "reasons"} for one process run; snap comes from process_snapshot()."""
     reasons = [f"run failed: {error}"] if error else []
@@ -61,9 +67,9 @@ def score_process(expect, snap, final, denials, error=None):
         if got not in allowed:
             reasons.append(f"{entry_id} is in {got}, expected {'/'.join(allowed)}")
     ids, others = expect.get("same_row"), expect.get("not_in_row", [])
-    if ids and not any(line.lstrip().startswith("|") and all(i[-4:] in line for i in ids)
+    if ids and not any(GROUP_LINE.match(line) and all(i[-4:] in line for i in ids)
                        and not any(o[-4:] in line for o in others) for line in final.splitlines()):
-        reasons.append(f"{', '.join(ids)} not grouped alone on one table row of the final answer")
+        reasons.append(f"{', '.join(ids)} not grouped alone on one table row or Entries line of the final answer")
     ids = expect.get("same_link")
     if ids:
         links = {entries.get(i, {}).get("link", "") for i in ids}
@@ -163,7 +169,7 @@ def run_one(suite, scenario, model, workdir):
         entries = read_entries(state) if (state / "inbox").is_dir() else []
         result = score(scenario["expect"], entries, denials, error)
         found = [f"{e.get('source')}/{e.get('kind') or '-'}" for e in entries]
-    return {**result, "found": found, "final": final[-1500:], "cost_usd": out.get("total_cost_usd")}
+    return {**result, "found": found, "final": final if not result["passed"] else final[-1500:], "cost_usd": out.get("total_cost_usd")}
 
 
 def main():
