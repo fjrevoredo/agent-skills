@@ -1,0 +1,94 @@
+{
+  "skill_name": "agent-feedback:process",
+  "model": "haiku",
+  "scenarios": [
+    {
+      "id": "triage-without-approval",
+      "prompt": "/agent-feedback:process",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash(ls *)",
+        "Bash(cat *)",
+        "Bash(git *)"
+      ],
+      "max_turns": 30,
+      "files": {
+        "README.md": "# demo\n\n## Development\n\nRun the tests with `./scripts/test.sh`.\n",
+        "Makefile": "test:\n\tpython3 -m unittest\n\nlint:\n\truff check .\n",
+        "calc.py": "def add(a, b):\n    return a + b\n"
+      },
+      "state": {
+        "inbox/20261110-100000-aaaa.md": "---\nid: \"20261110-100000-aaaa\"\ntime: \"2026-11-10T10:00:00+01:00\"\nsource: \"agent\"\nkind: \"docs\"\nseverity: \"medium\"\nsession: \"s1\"\nagent: \"claude-code\"\nmodel:\nrepo: \"https://gitlab.example.com/team/demo.git\"\npath:\nbranch: \"main\"\nsuggestion: \"Point README at make test\"\n---\n\nREADME.md (Development section) says to run the tests with ./scripts/test.sh. That script does not exist; `make test` runs them. Cost: two failed commands before finding the Makefile target.\n",
+        "inbox/20261111-140000-bbbb.md": "---\nid: \"20261111-140000-bbbb\"\ntime: \"2026-11-10T10:00:00+01:00\"\nsource: \"agent\"\nkind: \"tooling\"\nseverity: \"low\"\nsession: \"s2\"\nagent: \"claude-code\"\nmodel:\nrepo: \"https://gitlab.example.com/team/demo.git\"\npath:\nbranch: \"main\"\nsuggestion: \"Fix the README test command\"\n---\n\nFollowed the demo repo README to run tests: scripts/test.sh is missing (No such file or directory). Found the Makefile `test` target by hand.\n",
+        "inbox/20261112-090000-cccc.md": "---\nid: \"20261112-090000-cccc\"\ntime: \"2026-11-10T10:00:00+01:00\"\nsource: \"agent\"\nkind: \"tooling\"\nseverity: \"medium\"\nsession: \"s3\"\nagent: \"claude-code\"\nmodel:\nrepo: \"https://gitlab.example.com/team/demo.git\"\npath:\nbranch: \"main\"\nsuggestion: \"Switch the lint target to ruff\"\n---\n\n`make lint` in the demo repo calls flake9, which is not installed anywhere; lint could not run.\n",
+        "routing.md": "# Feedback routing\n\n| Target | Where it lives | Hand-off |\n|---|---|---|\n| The demo repo (docs, Makefile, scripts) | the current repo | brief |\n| Anything else | - | wontfix |\n"
+      },
+      "expect": {
+        "states": {
+          "20261110-100000-aaaa": [
+            "inbox"
+          ],
+          "20261111-140000-bbbb": [
+            "inbox"
+          ],
+          "20261112-090000-cccc": [
+            "inbox"
+          ]
+        },
+        "same_row": [
+          "20261110-100000-aaaa",
+          "20261111-140000-bbbb"
+        ],
+        "no_briefs": true,
+        "repo_unchanged": true
+      }
+    },
+    {
+      "id": "approved-in-advance",
+      "prompt": "/agent-feedback:process\n\nI can't answer questions during this run, so I approve in advance: hand off every group as you propose it (briefs, moves). Don't change any file in this repo.",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash(ls *)",
+        "Bash(cat *)",
+        "Bash(git *)"
+      ],
+      "max_turns": 40,
+      "files": {
+        "README.md": "# demo\n\n## Development\n\nRun the tests with `./scripts/test.sh`.\n",
+        "Makefile": "test:\n\tpython3 -m unittest\n\nlint:\n\truff check .\n",
+        "calc.py": "def add(a, b):\n    return a + b\n"
+      },
+      "state": {
+        "inbox/20261110-100000-aaaa.md": "---\nid: \"20261110-100000-aaaa\"\ntime: \"2026-11-10T10:00:00+01:00\"\nsource: \"agent\"\nkind: \"docs\"\nseverity: \"medium\"\nsession: \"s1\"\nagent: \"claude-code\"\nmodel:\nrepo: \"https://gitlab.example.com/team/demo.git\"\npath:\nbranch: \"main\"\nsuggestion: \"Point README at make test\"\n---\n\nREADME.md (Development section) says to run the tests with ./scripts/test.sh. That script does not exist; `make test` runs them. Cost: two failed commands before finding the Makefile target.\n",
+        "inbox/20261111-140000-bbbb.md": "---\nid: \"20261111-140000-bbbb\"\ntime: \"2026-11-10T10:00:00+01:00\"\nsource: \"agent\"\nkind: \"tooling\"\nseverity: \"low\"\nsession: \"s2\"\nagent: \"claude-code\"\nmodel:\nrepo: \"https://gitlab.example.com/team/demo.git\"\npath:\nbranch: \"main\"\nsuggestion: \"Fix the README test command\"\n---\n\nFollowed the demo repo README to run tests: scripts/test.sh is missing (No such file or directory). Found the Makefile `test` target by hand.\n",
+        "inbox/20261112-090000-cccc.md": "---\nid: \"20261112-090000-cccc\"\ntime: \"2026-11-10T10:00:00+01:00\"\nsource: \"agent\"\nkind: \"tooling\"\nseverity: \"medium\"\nsession: \"s3\"\nagent: \"claude-code\"\nmodel:\nrepo: \"https://gitlab.example.com/team/demo.git\"\npath:\nbranch: \"main\"\nsuggestion: \"Switch the lint target to ruff\"\n---\n\n`make lint` in the demo repo calls flake9, which is not installed anywhere; lint could not run.\n",
+        "routing.md": "# Feedback routing\n\n| Target | Where it lives | Hand-off |\n|---|---|---|\n| The demo repo (docs, Makefile, scripts) | the current repo | brief |\n| Anything else | - | wontfix |\n"
+      },
+      "expect": {
+        "states": {
+          "20261110-100000-aaaa": [
+            "proposed"
+          ],
+          "20261111-140000-bbbb": [
+            "proposed"
+          ],
+          "20261112-090000-cccc": [
+            "done",
+            "wontfix"
+          ]
+        },
+        "same_link": [
+          "20261110-100000-aaaa",
+          "20261111-140000-bbbb"
+        ],
+        "repo_unchanged": true
+      }
+    }
+  ]
+}

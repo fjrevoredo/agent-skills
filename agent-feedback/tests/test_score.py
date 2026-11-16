@@ -61,5 +61,52 @@ class ScoreTest(unittest.TestCase):
         self.assertTrue(r["passed"])
 
 
+class ScoreProcessTest(unittest.TestCase):
+    A, B, C = "20261110-100000-aaaa", "20261110-110000-bbbb", "20261110-120000-cccc"
+
+    def snap(self, states, links=None, briefs=(), repo_changed=False):
+        entries = {i: {"state": s, "link": (links or {}).get(i, "")} for i, s in states.items()}
+        return {"entries": entries, "briefs": list(briefs), "repo_changed": repo_changed}
+
+    def score(self, expect, snap, final="", denials=(), error=None):
+        return run_evals.score_process(expect, snap, final, list(denials), error)
+
+    def test_states_must_match(self):
+        expect = {"states": {self.A: ["inbox"], self.C: ["wontfix", "done"]}}
+        self.assertTrue(self.score(expect, self.snap({self.A: "inbox", self.C: "done"}))["passed"])
+        r = self.score(expect, self.snap({self.A: "proposed", self.C: "done"}))
+        self.assertFalse(r["passed"])
+        self.assertIn(self.A, r["reasons"][0])
+
+    def test_same_row_needs_both_ids_on_one_line_by_suffix(self):
+        expect = {"same_row": [self.A, self.B]}
+        snap = self.snap({})
+        self.assertTrue(self.score(expect, snap, final="| README path | aaaa, bbbb | 2 |")["passed"])
+        self.assertFalse(self.score(expect, snap, final="| x | aaaa |\n| y | bbbb |")["passed"])
+
+    def test_same_link_must_be_one_existing_brief(self):
+        expect = {"same_link": [self.A, self.B]}
+        ok = self.snap({self.A: "proposed", self.B: "proposed"},
+                       links={self.A: "/s/briefs/readme.md", self.B: "/s/briefs/readme.md"}, briefs=["readme.md"])
+        self.assertTrue(self.score(expect, ok)["passed"])
+        split = self.snap({self.A: "proposed", self.B: "proposed"},
+                          links={self.A: "briefs/a.md", self.B: "briefs/b.md"}, briefs=["a.md", "b.md"])
+        self.assertFalse(self.score(expect, split)["passed"])
+        missing = self.snap({self.A: "proposed", self.B: "proposed"},
+                            links={self.A: "briefs/x.md", self.B: "briefs/x.md"}, briefs=[])
+        self.assertFalse(self.score(expect, missing)["passed"])
+
+    def test_no_briefs_and_repo_unchanged(self):
+        expect = {"no_briefs": True, "repo_unchanged": True}
+        self.assertTrue(self.score(expect, self.snap({}))["passed"])
+        self.assertFalse(self.score(expect, self.snap({}, briefs=["x.md"]))["passed"])
+        self.assertFalse(self.score(expect, self.snap({}, repo_changed=True))["passed"])
+
+    def test_process_script_denial_and_errors_fail(self):
+        d = [{"tool_name": "Bash", "tool_input": {"command": "/p/scripts/process.py list"}}]
+        self.assertFalse(self.score({}, self.snap({}), denials=d)["passed"])
+        self.assertFalse(self.score({}, self.snap({}), error="exit 1")["passed"])
+
+
 if __name__ == "__main__":
     unittest.main()

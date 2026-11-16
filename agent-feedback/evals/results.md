@@ -20,3 +20,17 @@ with an expected source and kind (positives), no entry (negative), and no denial
 - The first runner used `--permission-mode acceptEdits`. In that mode the Skill call for a skill with
   `allowed-tools` is itself denied. The runner now uses the default mode.
 - Cost: about $0.008 per run.
+
+## 2026-11-16: `/agent-feedback:process` (`--suite process`)
+
+Haiku, Claude Code 2.1.325. Seeded state dir: two duplicate entries (README names a missing
+`scripts/test.sh`), one entry already fixed in the repo (`lint` target), a two-row routing file.
+
+| Scenario | Pass = | Result |
+|---|---|---|
+| triage-without-approval | nothing moved, no brief, repo untouched, duplicates on one table row | 4/4 |
+| approved-in-advance | duplicates in `proposed/` behind one brief in `briefs/`, the fixed entry in `done/`/`wontfix/`, repo untouched | 4/4 |
+
+- Without approval Haiku stops at the table and asks for a decision per row; with approval it writes
+  one brief, links both duplicates to it, and closes the fixed entry as done after reading the Makefile.
+- Cost: about $0.01 per run.

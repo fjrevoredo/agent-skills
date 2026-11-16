@@ -10,7 +10,7 @@
     {
       "name": "agent-feedback",
       "source": "./agent-feedback",
-      "description": "Capture friction with the agent setup as local feedback entries, to process later."
+      "description": "Capture friction with the agent setup as local feedback entries, then process them into fixes with /agent-feedback:process."
     },
     {
       "name": "needs-you",
